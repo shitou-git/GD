@@ -10,12 +10,12 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 /* ===== 牌尺寸配置区 ===== */
 /* 修改这里的数值可以调整牌的大小 */
 :root{
-  --tile-width: 48px;    /* 牌的宽度 */
-  --tile-height: 64px;   /* 牌的高度 */
-  --tile-font-size: 16px;/* 牌面字体大小 */
-  --tile-sub-font: 13px; /* 牌面小字大小（万/条/筒）*/
-  --tile-border-radius: 7px; /* 牌角圆角 */
-  --tile-back-icon: 28px;/* 牌背图标大小 */
+  --tile-width: 58px;    /* 牌的宽度 */
+  --tile-height: 78px;   /* 牌的高度 */
+  --tile-font-size: 19px;/* 牌面字体大小 */
+  --tile-sub-font: 15px; /* 牌面小字大小（万/条/筒）*/
+  --tile-border-radius: 8px; /* 牌角圆角 */
+  --tile-back-icon: 34px;/* 牌背图标大小 */
 }
 @media (max-width: 768px){
   :root{
@@ -1324,7 +1324,7 @@ function render(){
       html+=`<div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;justify-content:center">${btns}</div>`;
     }
   }
-  html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:800px;min-height:160px;padding:6px 12px;position:relative;box-sizing:border-box">
+  html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:780px;min-height:160px;padding:5px 10px;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
     <div class="meld-area">
       ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
