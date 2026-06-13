@@ -239,11 +239,26 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 (function(){
 
 // ========== 常量 ==========
-const SUIT_NAMES = {wan:'万',tiao:'条',tong:'筒',feng:'',jian:''};
+const SUIT_WAN = 'wan';
+const SUIT_TIAO = 'tiao';
+const SUIT_TONG = 'tong';
+const SUIT_FENG = 'feng';
+const SUIT_JIAN = 'jian';
+const SUIT_NAMES = {[SUIT_WAN]:'万',[SUIT_TIAO]:'条',[SUIT_TONG]:'筒',[SUIT_FENG]:'',[SUIT_JIAN]:''};
+const NUMBER_SUITS = [SUIT_WAN, SUIT_TIAO, SUIT_TONG];
 const WAN_CN = ['','一','二','三','四','五','六','七','八','九'];
 const FENG_CN = ['东','南','西','北'];
 const JIAN_CN = ['中','发','白'];
+// 座位名称（固定的东南西北位置，由玩家占据），与"庄家"概念分离
 const PLAYER_NAMES = ['东家','南家','西家','北家'];
+// 麻将标准 34 种牌（用于听牌遍历等）
+const TILE_KEYS_34 = (()=>{
+  const r=[];
+  for(const s of NUMBER_SUITS){ for(let v=1;v<=9;v++) r.push({suit:s,value:v}); }
+  for(let v=1;v<=4;v++) r.push({suit:SUIT_FENG,value:v});
+  for(let v=1;v<=3;v++) r.push({suit:SUIT_JIAN,value:v});
+  return r;
+})();
 
 // ========== 牌的创建与操作 ==========
 let tileId = 0;
@@ -253,9 +268,11 @@ function mkTile(suit,value){
 function mkWall(){
   const w=[];
   for(let i=0;i<4;i++){
-    for(let v=1;v<=9;v++){w.push(mkTile('wan',v));w.push(mkTile('tiao',v));w.push(mkTile('tong',v));}
-    for(let v=1;v<=4;v++) w.push(mkTile('feng',v));
-    for(let v=1;v<=3;v++) w.push(mkTile('jian',v));
+    for(let v=1;v<=9;v++){
+      for(const s of NUMBER_SUITS){ w.push(mkTile(s,v)); }
+    }
+    for(let v=1;v<=4;v++) w.push(mkTile(SUIT_FENG,v));
+    for(let v=1;v<=3;v++) w.push(mkTile(SUIT_JIAN,v));
   }
   return w;
 }
@@ -268,29 +285,34 @@ function shuffle(a){
   return r;
 }
 function tileLabel(t){
-  if(t.suit==='wan') return WAN_CN[t.value]+'万';
-  if(t.suit==='tiao') return t.value+'条';
-  if(t.suit==='tong') return t.value+'筒';
-  if(t.suit==='feng') return FENG_CN[t.value-1];
-  if(t.suit==='jian') return JIAN_CN[t.value-1];
+  if(t.suit===SUIT_WAN) return WAN_CN[t.value]+'万';
+  if(t.suit===SUIT_TIAO) return t.value+'条';
+  if(t.suit===SUIT_TONG) return t.value+'筒';
+  if(t.suit===SUIT_FENG) return FENG_CN[t.value-1];
+  if(t.suit===SUIT_JIAN) return JIAN_CN[t.value-1];
   return '';
 }
 function tileKey(t){ return t.suit+'-'+t.value; }
 function sameTile(a,b){ return a&&b&&a.suit===b.suit&&a.value===b.value; }
 function sortTiles(arr){
-  const order={wan:1,tiao:2,tong:3,feng:4,jian:5};
+  const order={[SUIT_WAN]:1,[SUIT_TIAO]:2,[SUIT_TONG]:3,[SUIT_FENG]:4,[SUIT_JIAN]:5};
   return [...arr].sort((a,b)=>order[a.suit]-order[b.suit]||a.value-b.value);
+}
+// 计算手牌 + melds 总牌数（用于检查听牌提示）
+function totalMeldTiles(melds){
+  let n=0; for(const m of melds) n+=m.tiles.length;
+  return n;
 }
 
 // ========== 牌的渲染 ==========
 function tileFaceHTML(tile,selected,small){
   const cls='tile-face'+(selected?' selected':'')+(small?' tile-face-small':'');
   let main='',sub='',suitCls='t-'+tile.suit;
-  if(tile.suit==='wan'){main=WAN_CN[tile.value][0];sub='万';}
-  else if(tile.suit==='tiao'){main=tile.value;sub='条';}
-  else if(tile.suit==='tong'){main=tile.value;sub='筒';}
-  else if(tile.suit==='feng'){main=FENG_CN[tile.value-1];sub='';}
-  else if(tile.suit==='jian'){main=JIAN_CN[tile.value-1];sub='';}
+  if(tile.suit===SUIT_WAN){main=WAN_CN[tile.value][0];sub='万';}
+  else if(tile.suit===SUIT_TIAO){main=tile.value;sub='条';}
+  else if(tile.suit===SUIT_TONG){main=tile.value;sub='筒';}
+  else if(tile.suit===SUIT_FENG){main=FENG_CN[tile.value-1];sub='';}
+  else if(tile.suit===SUIT_JIAN){main=JIAN_CN[tile.value-1];sub='';}
   return `<div class="${cls}"><span class="${suitCls}">${main}</span>${sub?`<span class="sub ${suitCls}">${sub}</span>`:''}</div>`;
 }
 function tileBackHTML(small){
@@ -309,7 +331,7 @@ function findSequences(tiles){
   const sorted=sortTiles(tiles);
   const first=sorted[0];
   const results=[];
-  const isSuit=['wan','tiao','tong'].includes(first.suit);
+  const isSuit=NUMBER_SUITS.includes(first.suit);
 
   // 1) 尝试刻子（3张相同）- 数牌/字牌都可以
   const sameAsFirst=sorted.filter(t=>sameTile(t,first));
@@ -367,11 +389,11 @@ function checkSevenPairs(hand){
 function checkThirteenOrphans(hand){
   if(hand.length!==14) return null;
   const need=[
-    {suit:'wan',value:1},{suit:'wan',value:9},
-    {suit:'tiao',value:1},{suit:'tiao',value:9},
-    {suit:'tong',value:1},{suit:'tong',value:9},
-    {suit:'feng',value:1},{suit:'feng',value:2},{suit:'feng',value:3},{suit:'feng',value:4},
-    {suit:'jian',value:1},{suit:'jian',value:2},{suit:'jian',value:3}
+    {suit:SUIT_WAN,value:1},{suit:SUIT_WAN,value:9},
+    {suit:SUIT_TIAO,value:1},{suit:SUIT_TIAO,value:9},
+    {suit:SUIT_TONG,value:1},{suit:SUIT_TONG,value:9},
+    {suit:SUIT_FENG,value:1},{suit:SUIT_FENG,value:2},{suit:SUIT_FENG,value:3},{suit:SUIT_FENG,value:4},
+    {suit:SUIT_JIAN,value:1},{suit:SUIT_JIAN,value:2},{suit:SUIT_JIAN,value:3}
   ];
   const byKey=groupBy(hand,tileKey);
   let hasPair=false;
@@ -409,19 +431,8 @@ function canHuInner(hand,melds,newTile){
 // 听牌检测：给定 13 张手牌（已含 melds 中的牌），返回能让整手牌胡牌的所有牌列表
 function getWinningTiles(hand,melds){
   const winners=[];
-  const checkSuit=['wan','tiao','tong'];
-  const checkHonors=[
-    {suit:'feng',value:1},{suit:'feng',value:2},{suit:'feng',value:3},{suit:'feng',value:4},
-    {suit:'jian',value:1},{suit:'jian',value:2},{suit:'jian',value:3}
-  ];
-  for(const s of checkSuit){
-    for(let v=1;v<=9;v++){
-      const testTile={id:'test',suit:s,value:v};
-      if(canHuInner(hand,melds,testTile)) winners.push(testTile);
-    }
-  }
-  for(const h of checkHonors){
-    const testTile={id:'test',suit:h.suit,value:h.value};
+  for(const k of TILE_KEYS_34){
+    const testTile={id:'test',suit:k.suit,value:k.value};
     if(canHuInner(hand,melds,testTile)) winners.push(testTile);
   }
   return winners;
@@ -435,14 +446,19 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
   const entries=[];
   let fan=0;
 
-  const suits=new Set(allTiles.filter(t=>['wan','tiao','tong'].includes(t.suit)).map(t=>t.suit));
-  const honorTiles=allTiles.filter(t=>['feng','jian'].includes(t.suit));
-  const suitTiles=allTiles.filter(t=>['wan','tiao','tong'].includes(t.suit));
+  // 预统计每种牌数量，避免重复 filter，提升性能
+  const countByKey=new Map();
+  allTiles.forEach(t=>{
+    const k=tileKey(t);
+    countByKey.set(k,(countByKey.get(k)||0)+1);
+  });
+
+  const suits=new Set(allTiles.filter(t=>NUMBER_SUITS.includes(t.suit)).map(t=>t.suit));
+  const honorTiles=allTiles.filter(t=>[SUIT_FENG,SUIT_JIAN].includes(t.suit));
+  const suitTiles=allTiles.filter(t=>NUMBER_SUITS.includes(t.suit));
 
   // 门清：没有任何明的吃/碰/明杠（melds为空 或 仅含暗杠）
   const isMenZen=melds.length===0||melds.every(m=>m.type==='closedGang');
-  // 副露碰碰胡检查：副露中是否全是刻子型（无吃）
-  const allMeldsTriplets=melds.every(m=>m.type==='peng'||m.type==='gang'||m.type==='closedGang');
   // 是否存在分解
   const hasDecompose=analysis.decompositions&&analysis.decompositions.length>0;
   // 是否某个分解中全部是刻子/杠
@@ -452,35 +468,35 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
 
   // ============== 特殊番型（独立，不与其他番型叠加）==============
 
-  // 十三幺 13 番（封顶）
+  // 十三幺 13 番（封顶，可突破普通爆胡）
   if(analysis.isThirteenOrphans){
     return {fan:13,entries:[{name:'十三幺',fan:13}],patternName:'十三幺'};
   }
 
-  // 字一色 8 番：全部是字牌（东南西北中发白）
+  // 字一色 6 番：全部是字牌（东南西北中发白）
   let isAllHonors=honorTiles.length===allTiles.length&&allTiles.length>0;
   if(isAllHonors&&!analysis.isSevenPairs){
-    fan+=8;entries.push({name:'字一色',fan:8});
+    fan+=6;entries.push({name:'字一色',fan:6});
   }
 
-  // 大三元 8 番：中、发、白 各至少 3 张（刻子）
-  if(!analysis.isSevenPairs&&fan<8){
-    const zhong=allTiles.filter(t=>t.suit==='jian'&&t.value===1); // 中
-    const fa=allTiles.filter(t=>t.suit==='jian'&&t.value===2);   // 发
-    const bai=allTiles.filter(t=>t.suit==='jian'&&t.value===3);  // 白
-    if(zhong.length>=3&&fa.length>=3&&bai.length>=3){
-      fan+=8;entries.push({name:'大三元',fan:8});
+  // 大三元 6 番：中、发、白 各至少 3 张（刻子）
+  if(!analysis.isSevenPairs&&fan<13){
+    const zhong=countByKey.get(SUIT_JIAN+'-1')||0;
+    const fa=countByKey.get(SUIT_JIAN+'-2')||0;
+    const bai=countByKey.get(SUIT_JIAN+'-3')||0;
+    if(zhong>=3&&fa>=3&&bai>=3){
+      fan+=6;entries.push({name:'大三元',fan:6});
     }
   }
 
-  // 大四喜 8 番：东南西北 都是刻子
-  if(!analysis.isSevenPairs&&fan<8){
-    const d=allTiles.filter(t=>t.suit==='feng'&&t.value===1);
-    const n=allTiles.filter(t=>t.suit==='feng'&&t.value===2);
-    const x=allTiles.filter(t=>t.suit==='feng'&&t.value===3);
-    const b=allTiles.filter(t=>t.suit==='feng'&&t.value===4);
-    if(d.length>=3&&n.length>=3&&x.length>=3&&b.length>=3){
-      fan+=8;entries.push({name:'大四喜',fan:8});
+  // 大四喜 6 番：东南西北 都是刻子
+  if(!analysis.isSevenPairs&&fan<13){
+    const d=countByKey.get(SUIT_FENG+'-1')||0;
+    const n=countByKey.get(SUIT_FENG+'-2')||0;
+    const x=countByKey.get(SUIT_FENG+'-3')||0;
+    const b=countByKey.get(SUIT_FENG+'-4')||0;
+    if(d>=3&&n>=3&&x>=3&&b>=3){
+      fan+=6;entries.push({name:'大四喜',fan:6});
     }
   }
 
@@ -495,33 +511,37 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
   // 清一色 4 番：单一花色 + 无字牌
   const isQingYiSe=!analysis.isSevenPairs&&suits.size===1&&suitTiles.length>0&&honorTiles.length===0;
 
-  // 碰碰胡 2 番：全部是刻子无顺子
-  const isPengPeng=!analysis.isSevenPairs&&allMeldsTriplets&&isAllTripletsByDecompose;
+  // 碰碰胡 2 番：全部是刻子无顺子（仅由手牌分解判定，因为副露的吃/碰/杠在分解逻辑中已考虑）
+  const isPengPeng=!analysis.isSevenPairs&&isAllTripletsByDecompose;
 
-  // 清碰 7 番：清一色 + 对对胡（特殊组合番）
-  if(isQingYiSe&&isPengPeng&&fan<8){
-    fan+=7;entries.push({name:'清碰',fan:7});
+  // 混一色 2 番：单一花色 + 字牌（不是清一色）
+  const isHunYiSe=!analysis.isSevenPairs&&!isQingYiSe&&suits.size===1&&honorTiles.length>0;
+
+  // 清碰 5 番：清一色 + 碰碰胡（特殊组合番）
+  if(isQingYiSe&&isPengPeng&&fan<13){
+    fan+=5;entries.push({name:'清碰',fan:5});
+  } else if(isHunYiSe&&isPengPeng&&fan<13){
+    fan+=4;entries.push({name:'混碰',fan:4});
   } else {
     // 单独清一色
-    if(isQingYiSe&&fan<8){
+    if(isQingYiSe&&fan<13){
       fan+=4;entries.push({name:'清一色',fan:4});
     }
     // 单独碰碰胡
-    if(isPengPeng&&fan<8){
+    if(isPengPeng&&fan<13){
       fan+=2;entries.push({name:'碰碰胡',fan:2});
+    }
+    // 单独混一色
+    if(isHunYiSe&&fan<13){
+      fan+=2;entries.push({name:'混一色',fan:2});
     }
   }
 
-  // 混一色 2 番：单一花色 + 字牌（不是清一色）
-  if(!analysis.isSevenPairs&&fan<8&&suits.size===1&&honorTiles.length>0){
-    fan+=2;entries.push({name:'混一色',fan:2});
-  }
-
   // 小三元 4 番：中发白 中 2 组刻子 + 1 对做将
-  if(!analysis.isSevenPairs&&fan<8){
-    const zhongC=allTiles.filter(t=>t.suit==='jian'&&t.value===1).length;
-    const faC=allTiles.filter(t=>t.suit==='jian'&&t.value===2).length;
-    const baiC=allTiles.filter(t=>t.suit==='jian'&&t.value===3).length;
+  if(!analysis.isSevenPairs&&fan<13){
+    const zhongC=countByKey.get(SUIT_JIAN+'-1')||0;
+    const faC=countByKey.get(SUIT_JIAN+'-2')||0;
+    const baiC=countByKey.get(SUIT_JIAN+'-3')||0;
     const counts=[zhongC,faC,baiC].sort((a,b)=>b-a); // 降序
     // 2 个 3+ 张 + 1 个 2张
     if(counts[0]>=3&&counts[1]>=3&&counts[2]===2){
@@ -530,13 +550,9 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
   }
 
   // 平胡 1 番：全部是顺子（无任何刻子/杠），字牌不做刻子
-  if(!analysis.isSevenPairs&&fan<8){
-    // 副露中不能有任何碰/杠（必须全是吃）
+  if(!analysis.isSevenPairs&&fan<13){
     const meldsAllChi=melds.length===0||melds.every(m=>m.type==='chi');
-    // 手牌分解中存在全顺子分解
     if(meldsAllChi&&isAllSequencesByDecompose){
-      // 字牌不能成刻子（字牌只有成对做将才允许平胡）
-      // 字牌数量必须 ≤ 2 张（即只用于做眼）
       if(honorTiles.length<=2){
         fan+=1;entries.push({name:'平胡',fan:1});
       }
@@ -620,7 +636,7 @@ function findHiddenGang(hand){
   return null;
 }
 function canChi(hand,t){
-  if(!['wan','tiao','tong'].includes(t.suit)) return [];
+  if(!NUMBER_SUITS.includes(t.suit)) return [];
   const same=hand.filter(x=>x.suit===t.suit);
   const results=[];
   const used=new Set();
@@ -646,14 +662,14 @@ function evalTile(hand,t){
   if(same>=3) score+=10;
   else if(same===2) score+=8;
   else if(same===1){
-    if(['wan','tiao','tong'].includes(t.suit)){
+    if(NUMBER_SUITS.includes(t.suit)){
       for(let d=-2;d<=2;d++){
         if(d===0) continue;
         if(hand.some(x=>x.suit===t.suit&&x.value===t.value+d)) score+=Math.max(0,4-Math.abs(d));
       }
     }else score+=2;
   }
-  if(['feng','jian'].includes(t.suit)&&same===1) score-=2;
+  if([SUIT_FENG,SUIT_JIAN].includes(t.suit)&&same===1) score-=2;
   if((t.value===1||t.value===9)&&same===1) score-=1;
   return score;
 }
@@ -1445,9 +1461,9 @@ function render(){
       <div class="hu-pattern">${huInfo.patternName}</div>
       <div class="hu-fan">${huInfo.fan} 番</div>
       <div class="hu-scores"><table><tbody>`;
-    // 分数两列展示：北-南一列，东-西一列
-    toastHtml+=`<tr><td>北:${players[3].score}</td><td>南:${players[2].score}</td></tr>`;
-    toastHtml+=`<tr><td>东:${players[1].score}</td><td>西:${players[0].score}</td></tr>`;
+    // 分数两列展示：北(3)/南(1) 一行，东(0)/西(2) 一行
+    toastHtml+=`<tr><td>北:${players[3].score}</td><td>南:${players[1].score}</td></tr>`;
+    toastHtml+=`<tr><td>东:${players[0].score}</td><td>西:${players[2].score}</td></tr>`;
     toastHtml+=`</tbody></table></div>
       <button class="btn btn-primary" onclick="newGame()" style="margin-top:8px">再来一局</button>
     </div>`;
@@ -1457,8 +1473,8 @@ function render(){
     toastHtml+=`<div class="floating-toast">
       <h3>🏁 流局</h3>
       <div class="hu-scores"><table><tbody>`;
-    toastHtml+=`<tr><td>北:${players[3].score}</td><td>南:${players[2].score}</td></tr>`;
-    toastHtml+=`<tr><td>东:${players[1].score}</td><td>西:${players[0].score}</td></tr>`;
+    toastHtml+=`<tr><td>北:${players[3].score}</td><td>南:${players[1].score}</td></tr>`;
+    toastHtml+=`<tr><td>东:${players[0].score}</td><td>西:${players[2].score}</td></tr>`;
     toastHtml+=`</tbody></table></div>
       <button class="btn btn-primary" onclick="newGame()" style="margin-top:8px">再来一局</button>
     </div>`;
