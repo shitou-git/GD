@@ -1245,7 +1245,7 @@ function render(){
   html+=`<div style="grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center">
     <div class="player-panel side${currentIdx===3&&phase==='playing'?' current':''}" style="min-height:180px">
       <div class="player-name">${p3.name}${p3.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p3.score}分</span></div>
-      <div class="meld-area" style="gap:2px 3px">
+      <div class="meld-area" style="gap:2px 3px;justify-content:flex-end">
         ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
       <div class="hand side-hand">${p3HandHtml}</div>
@@ -1324,7 +1324,7 @@ function render(){
       html+=`<div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;justify-content:center">${btns}</div>`;
     }
   }
-  html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:780px;min-height:160px;padding:5px 10px;position:relative;box-sizing:border-box">
+  html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:880px;min-height:120px;padding:4px 8px;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
     <div class="meld-area">
       ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
@@ -1352,7 +1352,7 @@ function render(){
   if(winningHint){
     html+=`<div style="position:absolute;left:50%;transform:translateX(-50%);top:-54px;z-index:40;background:rgba(20,20,20,.85);color:#d0c0a0;font-size:12px;padding:6px 16px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15)">${winningHint}</div>`;
   }
-  html+=`<div class="hand">`;
+  html+=`<div class="hand" style="width:860px;min-height:80px">`;
   p.hand.forEach(t=>{
     const sel=selectedTileId===t.id;
     const isDrawn=t.id===state.lastDrawnTileId;
