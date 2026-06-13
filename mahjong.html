@@ -39,9 +39,9 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
   .score{font-size:9px !important}
   .dealer-tag{font-size:8px !important;padding:1px 3px !important}
   .hand{gap:2px !important;min-height:auto !important;margin-top:3px !important}
-  .center-panel{padding:8px !important;min-height:120px !important;min-width:400px !important;max-width:400px !important}
+  .center-panel{padding:6px !important;min-height:140px !important;height:140px !important;min-width:360px !important;max-width:360px !important}
   .center-panel h2{font-size:14px !important}
-  .center-discards{width:380px !important;height:120px !important;min-height:120px !important}
+  .center-discards{width:340px !important;min-height:130px !important;max-height:130px !important}
   .tip{font-size:11px !important}
 }
 
@@ -131,7 +131,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 .meld-group span:last-child{font-size:8px;color:#666;margin-left:2px}
 
 /* 中央弃牌区 */
-.center-discards{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;padding:4px;border-radius:8px;margin-bottom:4px;width:520px;height:160px;z-index:1;position:relative;box-sizing:border-box;overflow:hidden}
+.center-discards{display:flex;flex-wrap:wrap;gap:2px 2px;justify-content:center;align-content:center;align-items:center;padding:6px;border:1px dashed rgba(200,200,200,.4);border-radius:8px;margin:0 auto;width:520px;min-height:180px;max-height:180px;z-index:1;position:relative;box-sizing:border-box;overflow:visible}
 .center-discard-tile{display:inline-block;position:relative;z-index:1}
 .center-discard-tile .tile-face{width:calc(var(--tile-width)*0.7);height:calc(var(--tile-height)*0.7);font-size:calc(var(--tile-font-size)*0.7)}
 .center-discard-tile .tile-face .sub{font-size:calc(var(--tile-sub-font)*0.7)}
@@ -159,7 +159,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 }
 .center-panel{
   background:transparent;border:1px solid rgba(200,200,200,.8);border-radius:12px;padding:8px 12px;
-  min-width:560px;min-height:220px;height:220px;max-width:560px;max-height:220px;text-align:center;display:flex;flex-direction:column;justify-content:center;position:relative;box-sizing:border-box;
+  min-width:560px;min-height:200px;height:200px;max-width:560px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;box-sizing:border-box;
 }
 .center-panel>*{position:relative}
 .center-discards{z-index:1;position:relative}
@@ -1180,7 +1180,7 @@ function render(){
     </div>
   </div>`;
 
-  html+=`<div style="display:grid;grid-template-columns:1fr 3fr 1fr;grid-template-rows:160px 230px 200px;gap:10px;width:100%;max-width:1200px">`;
+  html+=`<div style="display:grid;grid-template-columns:1fr 3fr 1fr;grid-template-rows:160px 200px 240px;gap:10px;width:100%;max-width:1200px">`;
   // 游戏结束时所有玩家明牌
   const isEnded=phase==='ended';
   // 获取胡牌的牌（用于在赢家手牌中放大显示）
