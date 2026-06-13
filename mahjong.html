@@ -398,11 +398,47 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
   // 门清：没有任何明的吃/碰/明杠（melds为空 或 仅含暗杠）
   const isMenZen=melds.length===0||melds.every(m=>m.type==='closedGang');
   // 副露碰碰胡检查：副露中是否全是刻子型（无吃）
-  const hasChiMeld=melds.some(m=>m.type==='chi');
   const allMeldsTriplets=melds.every(m=>m.type==='peng'||m.type==='gang'||m.type==='closedGang');
-  // 分解中是否有顺子（allTiles的分解）
-  const hasTripletForm=analysis.decompositions&&analysis.decompositions.length>0;
-  const isAllTripletsByDecompose=hasTripletForm&&analysis.decompositions.some(d=>d.groups.every(g=>g.length===3&&g.every(t=>tileKey(t)===tileKey(g[0]))));
+  // 是否存在分解
+  const hasDecompose=analysis.decompositions&&analysis.decompositions.length>0;
+  // 是否某个分解中全部是刻子/杠
+  const isAllTripletsByDecompose=hasDecompose&&analysis.decompositions.some(d=>d.groups.every(g=>g.length===3&&g.every(t=>tileKey(t)===tileKey(g[0]))));
+  // 是否存在分解中只有顺子（没有刻子）
+  const isAllSequencesByDecompose=hasDecompose&&analysis.decompositions.some(d=>d.groups.every(g=>g.length===3&&g.some(t=>tileKey(t)!==tileKey(g[0]))));
+
+  // ============== 特殊番型（独立，不与其他番型叠加）==============
+
+  // 十三幺 13 番（封顶）
+  if(analysis.isThirteenOrphans){
+    return {fan:13,entries:[{name:'十三幺',fan:13}],patternName:'十三幺'};
+  }
+
+  // 字一色 8 番：全部是字牌（东南西北中发白）
+  let isAllHonors=honorTiles.length===allTiles.length&&allTiles.length>0;
+  if(isAllHonors&&!analysis.isSevenPairs){
+    fan+=8;entries.push({name:'字一色',fan:8});
+  }
+
+  // 大三元 8 番：中、发、白 各至少 3 张（刻子）
+  if(!analysis.isSevenPairs&&fan<8){
+    const zhong=allTiles.filter(t=>t.suit==='jian'&&t.value===1); // 中
+    const fa=allTiles.filter(t=>t.suit==='jian'&&t.value===2);   // 发
+    const bai=allTiles.filter(t=>t.suit==='jian'&&t.value===3);  // 白
+    if(zhong.length>=3&&fa.length>=3&&bai.length>=3){
+      fan+=8;entries.push({name:'大三元',fan:8});
+    }
+  }
+
+  // 大四喜 8 番：东南西北 都是刻子
+  if(!analysis.isSevenPairs&&fan<8){
+    const d=allTiles.filter(t=>t.suit==='feng'&&t.value===1);
+    const n=allTiles.filter(t=>t.suit==='feng'&&t.value===2);
+    const x=allTiles.filter(t=>t.suit==='feng'&&t.value===3);
+    const b=allTiles.filter(t=>t.suit==='feng'&&t.value===4);
+    if(d.length>=3&&n.length>=3&&x.length>=3&&b.length>=3){
+      fan+=8;entries.push({name:'大四喜',fan:8});
+    }
+  }
 
   // 七小对 4 番（独立番型，不与其他叠加）
   if(analysis.isSevenPairs){
@@ -410,62 +446,66 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
     entries.push({name:'七小对',fan:4});
   }
 
-  // 十三幺 13 番（封顶）
-  if(analysis.isThirteenOrphans){
-    return {fan:13,entries:[{name:'十三幺',fan:13}],patternName:'十三幺'};
-  }
+  // ============== 组合番型 ==============
 
-  // 大三元 8 番：中、发、白 都是刻子
-  if(!analysis.isSevenPairs){
-    // 统计中/发/白在 melds 和 手牌中是否各有至少3张
-    const zhongTiles=allTiles.filter(t=>t.suit==='jian'&&t.value===3);
-    const faTiles=allTiles.filter(t=>t.suit==='jian'&&t.value===1);
-    const baiTiles=allTiles.filter(t=>t.suit==='jian'&&t.value===2);
-    if(zhongTiles.length>=3&&faTiles.length>=3&&baiTiles.length>=3){
-      fan+=8;entries.push({name:'大三元',fan:8});
+  // 清一色 4 番：单一花色 + 无字牌
+  const isQingYiSe=!analysis.isSevenPairs&&suits.size===1&&suitTiles.length>0&&honorTiles.length===0;
+
+  // 碰碰胡 2 番：全部是刻子无顺子
+  const isPengPeng=!analysis.isSevenPairs&&allMeldsTriplets&&isAllTripletsByDecompose;
+
+  // 清碰 7 番：清一色 + 对对胡（特殊组合番）
+  if(isQingYiSe&&isPengPeng&&fan<8){
+    fan+=7;entries.push({name:'清碰',fan:7});
+  } else {
+    // 单独清一色
+    if(isQingYiSe&&fan<8){
+      fan+=4;entries.push({name:'清一色',fan:4});
     }
-  }
-
-  // 大四喜 8 番：东南西北 都是刻子
-  if(!analysis.isSevenPairs&&fan<8){
-    const dTiles=allTiles.filter(t=>t.suit==='feng'&&t.value===1);
-    const nTiles=allTiles.filter(t=>t.suit==='feng'&&t.value===2);
-    const xTiles=allTiles.filter(t=>t.suit==='feng'&&t.value===3);
-    const bTiles=allTiles.filter(t=>t.suit==='feng'&&t.value===4);
-    if(dTiles.length>=3&&nTiles.length>=3&&xTiles.length>=3&&bTiles.length>=3){
-      fan+=8;entries.push({name:'大四喜',fan:8});
-    }
-  }
-
-  // 清一色 6 番（单一花色，无字牌，未被更高番型占用）
-  if(!analysis.isSevenPairs&&fan<8){
-    if(suits.size===1&&suitTiles.length>0&&honorTiles.length===0){
-      fan+=6;entries.push({name:'清一色',fan:6});
-    }
-  }
-
-  // 混一色 3 番（单一花色+字牌）
-  if(!analysis.isSevenPairs&&fan<8){
-    if(suits.size===1&&honorTiles.length>0&&!entries.some(e=>e.name==='清一色')){
-      fan+=3;entries.push({name:'混一色',fan:3});
-    }
-  }
-
-  // 碰碰胡 2 番（全部是刻子无顺子）
-  if(!analysis.isSevenPairs&&fan<8){
-    const isPengPeng=allMeldsTriplets&&isAllTripletsByDecompose;
-    if(isPengPeng){
+    // 单独碰碰胡
+    if(isPengPeng&&fan<8){
       fan+=2;entries.push({name:'碰碰胡',fan:2});
     }
   }
 
-  // 基础番型：如果什么都没有则为鸡胡 1 番（平胡）
+  // 混一色 2 番：单一花色 + 字牌（不是清一色）
+  if(!analysis.isSevenPairs&&fan<8&&suits.size===1&&honorTiles.length>0){
+    fan+=2;entries.push({name:'混一色',fan:2});
+  }
+
+  // 小三元 4 番：中发白 中 2 组刻子 + 1 对做将
+  if(!analysis.isSevenPairs&&fan<8){
+    const zhongC=allTiles.filter(t=>t.suit==='jian'&&t.value===1).length;
+    const faC=allTiles.filter(t=>t.suit==='jian'&&t.value===2).length;
+    const baiC=allTiles.filter(t=>t.suit==='jian'&&t.value===3).length;
+    const counts=[zhongC,faC,baiC].sort((a,b)=>b-a); // 降序
+    // 2 个 3+ 张 + 1 个 2张
+    if(counts[0]>=3&&counts[1]>=3&&counts[2]===2){
+      fan+=4;entries.push({name:'小三元',fan:4});
+    }
+  }
+
+  // 平胡 1 番：全部是顺子（无任何刻子/杠），字牌不做刻子
+  if(!analysis.isSevenPairs&&fan<8){
+    // 副露中不能有任何碰/杠（必须全是吃）
+    const meldsAllChi=melds.length===0||melds.every(m=>m.type==='chi');
+    // 手牌分解中存在全顺子分解
+    if(meldsAllChi&&isAllSequencesByDecompose){
+      // 字牌不能成刻子（字牌只有成对做将才允许平胡）
+      // 字牌数量必须 ≤ 2 张（即只用于做眼）
+      if(honorTiles.length<=2){
+        fan+=1;entries.push({name:'平胡',fan:1});
+      }
+    }
+  }
+
+  // 基础番型：如果什么都没有则为鸡胡 1 番
   if(entries.length===0){
     fan+=1;entries.push({name:'鸡胡',fan:1});
   }
 
-  // === 叠加番 ===
-  // 门清 +1 番（没有吃/碰/明杠；仅在非七小对时加）
+  // ============== 叠加番 ==============
+  // 门清 +1 番（没有吃/碰/明杠；仅在非七小对/非特殊番时加）
   if(isMenZen&&!analysis.isSevenPairs){
     fan+=1;entries.push({name:'门清',fan:1});
   }
@@ -473,17 +513,21 @@ function countFan(hand,melds,selfDraw,analysis,newTile){
   if(selfDraw){
     fan+=1;entries.push({name:'自摸',fan:1});
   }
-  // 杠上开花 +2 番
+  // 杠上开花 +1 番
   if(analysis.isGangBlooming){
-    fan+=2;entries.push({name:'杠上开花',fan:2});
+    fan+=1;entries.push({name:'杠上开花',fan:1});
   }
-  // 抢杠胡 +2 番
+  // 抢杠胡 +1 番
   if(analysis.isRobGang){
-    fan+=2;entries.push({name:'抢杠胡',fan:2});
+    fan+=1;entries.push({name:'抢杠胡',fan:1});
   }
 
-  // 封顶 13 番
-  if(fan>13) fan=13;
+  // 封顶 5 番（爆胡制度；特殊番型已在上面提前判定），十三幺/大三元/大四喜/字一色 8 番为突破封顶
+  if(!entries.some(e=>['大三元','大四喜','字一色','十三幺','清碰'].includes(e.name))){
+    if(fan>5) fan=5;
+  } else {
+    if(fan>13) fan=13;
+  }
   return {fan,entries,patternName:entries.map(e=>e.name).join('+')};
 }
 
@@ -1272,14 +1316,15 @@ function render(){
   html+=`<div style="grid-column:1/4;grid-row:3;display:flex;justify-content:center;align-items:center;position:relative">`;
   // 悬浮提示 - 仅在选中牌时显示"打出"按钮
   if(phase==='playing'&&isHumanTurn&&!state.needsDraw&&selectedTileId){
-    html+=`<div onclick="humanDiscard('${selectedTileId}')" style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);z-index:50;background:linear-gradient(90deg,#e67e22,#f39c12);color:#fff;padding:4px 18px;border-radius:8px;font-weight:bold;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap;cursor:pointer">打出 ${tileLabel(p.hand.find(t=>t.id===selectedTileId))}</div>`;
+    html+=`<div onclick="humanDiscard('${selectedTileId}')" style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;background:linear-gradient(90deg,#e67e22,#f39c12);color:#fff;padding:10px 28px;border-radius:12px;font-weight:bold;font-size:18px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.3)">打出 ${tileLabel(p.hand.find(t=>t.id===selectedTileId))}</div>`;
   }
   html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:800px;min-height:160px;padding:6px 12px;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
     <div class="meld-area">
       ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
     </div>`;
-  // 听牌提示（仅当手牌可胡时显示，悬浮在面板顶部，不影响布局）
+  // 听牌提示（仅当手牌可胡时显示，悬浮在外层面板顶部，不影响布局）
+  let winningHint='';
   if(phase==='playing'&&isHumanTurn&&!canSelfHu){
     const expectedHandSize=14-3*p.melds.length;
     if(p.hand.length===expectedHandSize){
@@ -1289,15 +1334,17 @@ function render(){
         if(wins.length>0) winningHints.push({discard:td,wins});
       }
       if(winningHints.length>0){
-        let hintHtml='听牌：';
+        winningHint='听牌：';
         winningHints.slice(0,3).forEach(h=>{
           const ws=h.wins.map(t=>tileLabel(t)).join('、');
-          hintHtml+=`<span style="margin:0 6px">打 <b style="color:#f0c040">${tileLabel(h.discard)}</b> → 听 <b style="color:#4ade80">${ws}</b></span>`;
+          winningHint+=`<span style="margin:0 6px">打 <b style="color:#f0c040">${tileLabel(h.discard)}</b> → 听 <b style="color:#4ade80">${ws}</b></span>`;
         });
-        if(winningHints.length>3) hintHtml+=`<span style="color:#888">(共${winningHints.length}种)</span>`;
-        html+=`<div style="position:absolute;left:50%;transform:translateX(-50%);top:-12px;z-index:20;background:rgba(20,20,20,.85);color:#d0c0a0;font-size:12px;padding:5px 14px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)">${hintHtml}</div>`;
+        if(winningHints.length>3) winningHint+=`<span style="color:#888">(共${winningHints.length}种)</span>`;
       }
     }
+  }
+  if(winningHint){
+    html+=`<div style="position:absolute;left:50%;transform:translateX(-50%);top:-54px;z-index:40;background:rgba(20,20,20,.85);color:#d0c0a0;font-size:12px;padding:6px 16px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15)">${winningHint}</div>`;
   }
   html+=`<div class="hand">`;
   p.hand.forEach(t=>{
