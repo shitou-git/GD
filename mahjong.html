@@ -188,6 +188,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 
 <script>
 'use strict';
+(function(){
 
 // ========== 常量 ==========
 const SUIT_NAMES = {wan:'万',tiao:'条',tong:'筒',feng:'',jian:''};
@@ -289,7 +290,6 @@ function findSequences(tiles){
 function tryDecompose(hand){
   if(!hand.length) return [];
   const results=[];
-  const byKey=groupBy(hand,t=>t.id);
   const keyGroups=new Map();
   hand.forEach(t=>{const k=tileKey(t);(keyGroups.get(k)||(keyGroups.set(k,[]),keyGroups.get(k))).push(t);});
 
@@ -356,6 +356,27 @@ function findGangFromPeng(hand,melds){
 
 function canHuInner(hand,melds,newTile){
   return tryHu(hand,melds,newTile,false)!==null;
+}
+
+// 听牌检测：给定 13 张手牌（已含 melds 中的牌），返回能让整手牌胡牌的所有牌列表
+function getWinningTiles(hand,melds){
+  const winners=[];
+  const checkSuit=['wan','tiao','tong'];
+  const checkHonors=[
+    {suit:'feng',value:1},{suit:'feng',value:2},{suit:'feng',value:3},{suit:'feng',value:4},
+    {suit:'jian',value:1},{suit:'jian',value:2},{suit:'jian',value:3}
+  ];
+  for(const s of checkSuit){
+    for(let v=1;v<=9;v++){
+      const testTile={id:'test',suit:s,value:v};
+      if(canHuInner(hand,melds,testTile)) winners.push(testTile);
+    }
+  }
+  for(const h of checkHonors){
+    const testTile={id:'test',suit:h.suit,value:h.value};
+    if(canHuInner(hand,melds,testTile)) winners.push(testTile);
+  }
+  return winners;
 }
 
 function countFan(hand,melds,selfDraw,analysis,newTile){
@@ -481,7 +502,12 @@ function tryHu(hand,melds,newTile,selfDraw,isGangBlooming,isRobGang){
   return {fan,entries,patternName,tiles:all,selfDraw};
 }
 
-function getScore(fan){return fan<=0?1:Math.pow(2,Math.min(fan,10)-1);}
+function getScore(fan){
+  if(fan<=0) return 1;
+  if(fan>=13) return 4096; // 13 番满贯：特殊封顶
+  if(fan>=10) return 1024; // 10-12 番统一 1024 分
+  return Math.pow(2,fan-1); // 1-9 番：2^(n-1)
+}
 
 // ========== 吃/碰/杠判定 ==========
 function canPeng(hand,t){
@@ -559,6 +585,10 @@ function aiDecide(hand,melds,t,isUpstream){
 }
 
 // ========== 游戏状态 ==========
+// 记录跨局的庄家索引与累积分数（第一局庄家为 0，之后按连庄规则更新）
+let persistentDealerIdx=0;
+let persistentScores=[0,0,0,0];
+
 const state={
   players:[],
   wall:[],
@@ -581,6 +611,23 @@ const state={
 // ========== 游戏初始化 ==========
 function newGame(){
   tileId=0;
+  // 连庄规则：若上局庄家胡牌或流局，庄家不变；闲家胡牌则胡牌者新庄，否则下家新庄
+  if(state.players.length>0){
+    const prevDealer=state.players.findIndex(p=>p.isDealer);
+    if(prevDealer>=0){
+      if(state.phase==='ended' && state.winnerIdx===prevDealer){
+        persistentDealerIdx=prevDealer; // 庄家胡牌，连庄
+      } else if(state.phase==='draw'){
+        persistentDealerIdx=prevDealer; // 流局，连庄
+      } else if(state.winnerIdx!==null){
+        persistentDealerIdx=state.winnerIdx; // 闲家胡牌，胡牌者做庄
+      } else {
+        persistentDealerIdx=(prevDealer+1)%4; // 其他情况，下家做庄
+      }
+    }
+    persistentScores=state.players.map(p=>p.score||0);
+  }
+
   state.wall=shuffle(mkWall());
   state.players=[];
   state.phase='dealing';
@@ -595,6 +642,7 @@ function newGame(){
   state.needsDraw=true;
   state.allDiscards=[];
   state.lastDrawnTileId=null;
+  state.dealerIdx=persistentDealerIdx;
 
   for(let i=0;i<4;i++){
     const hand=[];
@@ -602,17 +650,17 @@ function newGame(){
     state.players.push({
       id:i,name:PLAYER_NAMES[i],isHuman:i===0,
       hand:sortTiles(hand),melds:[],discards:[],
-      score:0,isDealer:i===0,hasWon:false,
+      score:persistentScores[i]||0,isDealer:i===persistentDealerIdx,hasWon:false,
     });
   }
-  state.log.push(`游戏开始，${PLAYER_NAMES[0]}做庄`);
-  state.currentIdx=state.dealerIdx;
+  state.log.push(`游戏开始，${PLAYER_NAMES[persistentDealerIdx]}做庄`);
+  state.currentIdx=persistentDealerIdx;
   // 庄家起第一张牌（不需要再摸牌了）
-  state.players[state.dealerIdx].hand.push(state.wall.pop());
-  state.players[state.dealerIdx].hand=sortTiles(state.players[state.dealerIdx].hand);
+  state.players[persistentDealerIdx].hand.push(state.wall.pop());
+  state.players[persistentDealerIdx].hand=sortTiles(state.players[persistentDealerIdx].hand);
   state.phase='playing';
   state.needsDraw=false;
-  state.log.push(`${PLAYER_NAMES[state.dealerIdx]}起第一张牌`);
+  state.log.push(`${PLAYER_NAMES[persistentDealerIdx]}起第一张牌`);
   render();
   // 启动机器人
   setTimeout(turnLoop,800);
@@ -621,7 +669,6 @@ function newGame(){
 // ========== 回合流程 ==========
 function turnLoop(){
   if(state.phase!=='playing') return;
-  if(state.currentIdx===0) return; // 玩家回合，等待操作
   const idx=state.currentIdx;
   // 摸牌（吃/碰/杠后进入自己回合不需要摸牌）
   if(state.needsDraw){
@@ -630,34 +677,55 @@ function turnLoop(){
       state.log.push('牌墙已空，流局');
       render();return;
     }
+    if(idx===0){
+      // 人类摸牌：直接调用 humanDraw 来处理（处理摸牌+高亮+重置 needsDraw）
+      humanDraw();
+      return; // 等待人类操作
+    }
     const drawn=state.wall.pop();
     state.players[idx].hand=sortTiles([...state.players[idx].hand,drawn]);
     state.log.push(`${PLAYER_NAMES[idx]}摸牌`);
   } else {
     state.needsDraw=true;
   }
+  if(idx===0) return; // 玩家回合（吃/碰/杠后已在自己回合），等待操作
 
   // AI 自摸
   if(canHuInner(state.players[idx].hand,state.players[idx].melds,null)){
     const r=tryHu(state.players[idx].hand,state.players[idx].melds,null,true);
     if(r){
       const sc=getScore(r.fan);
-      state.players.forEach((p,i)=>{p.score+=(i===idx?1:-1)*sc*3;});
+      // 自摸家家赔：每家 -sc，赢家 +3sc
+      state.players.forEach((p,i)=>{if(i!==idx)p.score-=sc;});
+      state.players[idx].score+=sc*3;
       state.players[idx].hasWon=true;
       state.winnerIdx=idx;state.huInfo=r;state.phase='ended';
-      state.log.push(`${PLAYER_NAMES[idx]}自摸！${r.patternName}（${r.fan}番）`);
+      state.log.push(`${PLAYER_NAMES[idx]}自摸！${r.patternName}（${r.fan}番）得分${sc*3}`);
       render();return;
     }
   }
 
-  // 暗杠
+  // 暗杠（closedGang，不破坏门清）
   const hg=findHiddenGang(state.players[idx].hand);
   if(hg){
-    state.players[idx].melds.push({type:'gang',tiles:hg});
+    state.players[idx].melds.push({type:'closedGang',tiles:hg});
     state.players[idx].hand=state.players[idx].hand.filter(t=>!hg.includes(t));
     if(state.wall.length>0){
       const b=state.wall.pop();
       state.players[idx].hand=sortTiles([...state.players[idx].hand,b]);
+      // 检查杠上开花
+      if(canHuInner(state.players[idx].hand,state.players[idx].melds,null)){
+        const r=tryHu(state.players[idx].hand,state.players[idx].melds,null,true,true,false);
+        if(r){
+          const sc=getScore(r.fan);
+          state.players.forEach((p,i)=>{if(i!==idx)p.score-=sc;});
+          state.players[idx].score+=sc*3;
+          state.players[idx].hasWon=true;
+          state.winnerIdx=idx;state.huInfo=r;state.phase='ended';
+          state.log.push(`${PLAYER_NAMES[idx]}暗杠杠上开花！${r.patternName}（${r.fan}番）得分${sc*3}`);
+          render();return;
+        }
+      }
     }
     state.log.push(`${PLAYER_NAMES[idx]}暗杠`);
   }
@@ -739,13 +807,48 @@ function aiClaimPhase(){
     } else if(action==='gang'){
       const gt=findGang(p.hand,state.lastDiscard);
       if(gt){
-        p.melds.push({type:'gang',tiles:[...gt,state.lastDiscard]});
-        p.hand=p.hand.filter(t=>!gt.includes(t));
-        if(state.wall.length>0){
-          const b=state.wall.pop();
-          p.hand=sortTiles([...p.hand,b]);
+        const gangTile=state.lastDiscard;
+        // 先检测抢杠胡（其他玩家胡这张牌）
+        let robbed=false;
+        for(let j=0;j<4;j++){
+          if(j===target.playerId) continue;
+          const qp=state.players[j];
+          if(canHuInner(qp.hand,qp.melds,gangTile)){
+            const qr=tryHu(qp.hand,qp.melds,gangTile,false,false,true);
+            if(qr){
+              const sc=getScore(qr.fan);
+              state.players[target.playerId].score-=sc*3; // 杠者包 3 倍
+              qp.score+=sc*3;
+              qp.hasWon=true;
+              state.winnerIdx=j;state.huInfo=qr;state.phase='ended';
+              state.log.push(`${PLAYER_NAMES[j]}抢杠胡！${qr.patternName}（${qr.fan}番）包${PLAYER_NAMES[target.playerId]}三倍${sc*3}分`);
+              robbed=true;
+              render();return;
+            }
+          }
         }
-        state.log.push(`${PLAYER_NAMES[target.playerId]}杠`);
+        if(!robbed){
+          p.melds.push({type:'gang',tiles:[...gt,gangTile]});
+          p.hand=p.hand.filter(t=>!gt.includes(t));
+          if(state.wall.length>0){
+            const b=state.wall.pop();
+            p.hand=sortTiles([...p.hand,b]);
+            // 检查杠上开花
+            if(canHuInner(p.hand,p.melds,null)){
+              const br=tryHu(p.hand,p.melds,null,true,true,false);
+              if(br){
+                const sc=getScore(br.fan);
+                state.players.forEach((pp,i)=>{if(i!==target.playerId)pp.score-=sc;});
+                p.score+=sc*3;
+                p.hasWon=true;
+                state.winnerIdx=target.playerId;state.huInfo=br;state.phase='ended';
+                state.log.push(`${PLAYER_NAMES[target.playerId]}杠上开花！${br.patternName}（${br.fan}番）得分${sc*3}`);
+                render();return;
+              }
+            }
+          }
+          state.log.push(`${PLAYER_NAMES[target.playerId]}杠`);
+        }
       }
     } else if(action==='peng'){
       const pt=p.hand.filter(t=>sameTile(t,state.lastDiscard)).slice(0,2);
@@ -1061,12 +1164,6 @@ function render(){
   const p=players[0];
   const isHumanTurn=phase==='playing'&&currentIdx===0;
 
-  // 自动摸牌（吃/碰/杠后不需要摸牌）
-  if(isHumanTurn&&state.needsDraw){
-    humanDraw();
-    return;
-  }
-
   const canSelfHu=isHumanTurn&&canHuInner(p.hand,p.melds,null);
   const canHiddenGang=isHumanTurn&&findHiddenGang(p.hand)!==null;
   const canCLaimHu=phase==='claiming'&&pending.some(p=>p.playerId===0&&p.type==='hu');
@@ -1153,7 +1250,8 @@ function render(){
     if(canClaimGang) html+=`<button class="btn btn-info" onclick="humanClaimGang()">杠</button>`;
     if(canClaimPeng) html+=`<button class="btn btn-warning" onclick="humanClaimPeng()">碰</button>`;
     chiOpts.forEach((opt,i)=>{
-      html+=`<button class="btn btn-primary" onclick="humanClaimChi(${i})">吃</button>`;
+      const combo=[...opt.tiles,lastDiscard].sort((a,b)=>a.value-b.value).map(t=>tileLabel(t)).join('');
+      html+=`<button class="btn btn-primary" onclick="humanClaimChi(${i})">吃 ${combo}</button>`;
     });
     if(canPass) html+=`<button class="btn btn-secondary" onclick="humanPass()">过</button>`;
     html+=`</div>`;
@@ -1163,6 +1261,26 @@ function render(){
     if(canHiddenGang) html+=`<button class="btn btn-info" onclick="humanHiddenGang()">暗杠</button>`;
     if(findGangFromPeng(state.players[0].hand,state.players[0].melds)) html+=`<button class="btn btn-info" onclick="humanGangFromPeng()">补杠</button>`;
     html+=`</div>`;
+    // 听牌提示：手牌 14 张且未自摸时，提示打哪张后能听什么
+    if(!canSelfHu&&p.hand.length===14){
+      const winningHints=[];
+      for(const td of p.hand){
+        const rem=p.hand.filter(t=>t.id!==td.id);
+        const wins=getWinningTiles(rem,p.melds);
+        if(wins.length>0) winningHints.push({discard:td,wins});
+      }
+      if(winningHints.length>0){
+        html+=`<div class="tip" style="margin-top:6px;text-align:center;color:#bbb">听牌：`;
+        winningHints.slice(0,3).forEach(h=>{
+          const ws=h.wins.map(t=>tileLabel(t)).join('、');
+          html+=`<span style="margin:0 8px">打 <b style="color:#f0c040">${tileLabel(h.discard)}</b> → 听 <b style="color:#4ade80">${ws}</b></span>`;
+        });
+        if(winningHints.length>3) html+=`<span style="color:#888">(共${winningHints.length}种)</span>`;
+        html+=`</div>`;
+      } else {
+        html+=`<div class="tip" style="margin-top:6px;text-align:center;color:#888">尚未听牌，选张最没用的牌打出</div>`;
+      }
+    }
   }
   html+=`</div></div>`;
 
@@ -1257,8 +1375,22 @@ function selectTile(id){
   render();
 }
 
+// 暴露到全局（供 HTML onclick 调用）
+window.newGame=newGame;
+window.humanDiscard=humanDiscard;
+window.humanSelfHu=humanSelfHu;
+window.humanHiddenGang=humanHiddenGang;
+window.humanGangFromPeng=humanGangFromPeng;
+window.humanClaimHu=humanClaimHu;
+window.humanClaimGang=humanClaimGang;
+window.humanClaimPeng=humanClaimPeng;
+window.humanClaimChi=humanClaimChi;
+window.humanPass=humanPass;
+window.selectTile=selectTile;
+
 // 启动
 newGame();
+})();
 </script>
 </body>
 </html>
