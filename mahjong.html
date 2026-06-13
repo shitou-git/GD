@@ -26,7 +26,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
     --tile-border-radius: 5px;
     --tile-back-icon: 18px;
   }
-  .game-grid{grid-template-columns:1fr 2.2fr 1fr !important;grid-template-rows:140px 190px 240px !important;gap:6px !important;max-width:760px !important}
+  .game-grid{grid-template-columns:1.2fr 2.2fr 1.2fr !important;grid-template-rows:140px 230px 240px !important;gap:6px !important;max-width:780px !important}
   .header-bar{font-size:14px;padding:6px 8px}
   .header-bar .btn{padding:4px 8px;font-size:11px}
   /* 四家面板：清空内联大宽度，改成移动端合适尺寸 */
@@ -34,8 +34,8 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
   .top-panel .hand{width:100% !important;min-height:60px !important;flex-wrap:nowrap !important;overflow:hidden}
   .bottom-panel{width:96% !important;max-width:700px !important;min-height:130px !important;padding:4px 8px !important}
   .bottom-panel .hand{width:100% !important;min-height:70px !important}
-  .left-panel,.right-panel{height:190px !important;min-height:190px !important;max-width:none !important;padding:4px 6px !important}
-  .left-panel .hand.side-hand,.right-panel .hand.side-hand{gap:1px 1px !important;min-height:120px !important}
+  .left-panel,.right-panel{height:230px !important;min-height:230px !important;max-width:260px !important;padding:4px 6px !important}
+  .left-panel .hand.side-hand,.right-panel .hand.side-hand{gap:1px 1px !important;min-height:160px !important}
   /* 中央弃牌区 */
   .center-panel{padding:4px !important;min-height:150px !important;height:150px !important;min-width:auto !important;max-width:100% !important;width:95%}
   .center-panel h2{font-size:14px}
@@ -69,10 +69,10 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
     --tile-border-radius: 4px;
     --tile-back-icon: 14px;
   }
-  .game-grid{grid-template-columns:1fr 2fr 1fr !important;grid-template-rows:130px 170px 210px !important;gap:4px !important}
+  .game-grid{grid-template-columns:1.1fr 2fr 1.1fr !important;grid-template-rows:130px 210px 210px !important;gap:4px !important}
   .top-panel{width:96% !important;min-height:120px !important;padding:3px 6px !important}
   .bottom-panel{width:98% !important;min-height:120px !important;padding:3px 6px !important}
-  .left-panel,.right-panel{height:170px !important;min-height:170px !important;padding:3px 5px !important}
+  .left-panel,.right-panel{height:210px !important;min-height:210px !important;max-width:240px !important;padding:3px 5px !important}
   .center-panel{min-height:130px !important;height:130px !important;padding:3px !important}
   .center-discards{max-width:280px !important;min-height:130px !important;max-height:130px !important;padding:3px !important}
   .player-name{font-size:10px !important}
@@ -151,7 +151,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
   min-width:200px;
   display:flex;flex-direction:column;min-height:140px;
 }
-.player-panel.side{width:100%;max-width:220px;min-height:180px}
+.player-panel.side{width:100%;max-width:260px;min-height:180px}
 .player-panel.current{border:2px solid #f0c040;box-shadow:0 0 15px rgba(240,192,64,.4)}
 .player-name{font-weight:bold;font-size:13px;color:#f0e8d0;margin-bottom:4px;display:flex;align-items:center;gap:6px}
 .score{color:#c0b8a0;font-size:11px}
@@ -1272,7 +1272,7 @@ function render(){
     </div>
   </div>`;
 
-  html+=`<div class="game-grid" style="display:grid;grid-template-columns:1fr 3fr 1fr;grid-template-rows:150px 220px 240px;gap:10px;width:100%;max-width:1200px">`;
+  html+=`<div class="game-grid" style="display:grid;grid-template-columns:1.3fr 3fr 1.3fr;grid-template-rows:150px 260px 240px;gap:10px;width:100%;max-width:1280px">`;
   // 游戏结束时所有玩家明牌
   const isEnded=phase==='ended';
   // 获取胡牌的牌（用于在赢家手牌中放大显示）
@@ -1287,12 +1287,12 @@ function render(){
   const p3=players[3];
   const p3HandHtml=isEnded?(p3.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===3&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p3.hand.map(()=>tileBackHTML()).join('');
   html+=`<div style="grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center">
-    <div class="player-panel side left-panel${currentIdx===3&&phase==='playing'?' current':''}" style="height:200px;min-height:200px">
+    <div class="player-panel side left-panel${currentIdx===3&&phase==='playing'?' current':''}" style="height:250px;min-height:250px">
       <div class="player-name">${p3.name}${p3.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p3.score}分</span></div>
       <div class="meld-area side-melds" style="justify-content:flex-end">
         ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
-      <div class="hand side-hand" style="height:auto;min-height:130px;overflow:hidden">${p3HandHtml}</div>
+      <div class="hand side-hand" style="height:auto;min-height:180px;overflow:hidden">${p3HandHtml}</div>
     </div>
   </div>`;
 
@@ -1314,12 +1314,12 @@ function render(){
   const p1=players[1];
   const p1HandHtml=isEnded?(p1.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===1&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p1.hand.map(()=>tileBackHTML()).join('');
   html+=`<div style="grid-column:3;grid-row:2;display:flex;align-items:center;justify-content:center">
-    <div class="player-panel side right-panel${currentIdx===1&&phase==='playing'?' current':''}" style="height:200px;min-height:200px">
+    <div class="player-panel side right-panel${currentIdx===1&&phase==='playing'?' current':''}" style="height:250px;min-height:250px">
       <div class="player-name">${p1.name}${p1.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p1.score}分</span></div>
       <div class="meld-area side-melds">
         ${p1.melds.length?p1.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
-      <div class="hand side-hand" style="height:auto;min-height:130px;overflow:hidden">${p1HandHtml}</div>
+      <div class="hand side-hand" style="height:auto;min-height:180px;overflow:hidden">${p1HandHtml}</div>
     </div>
   </div>`;
 
@@ -1349,13 +1349,13 @@ function render(){
   html+=`<div style="grid-column:1/4;grid-row:3;display:flex;justify-content:center;align-items:center;position:relative">`;
   // 悬浮提示 - 玩家回合打出按钮（选中牌时）
   if(phase==='playing'&&isHumanTurn&&!state.needsDraw&&selectedTileId){
-    html+=`<div onclick="humanDiscard('${selectedTileId}')" style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;background:linear-gradient(90deg,#e67e22,#f39c12);color:#fff;padding:10px 28px;border-radius:12px;font-weight:bold;font-size:18px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.3)">打出 ${tileLabel(p.hand.find(t=>t.id===selectedTileId))}</div>`;
+    html+=`<div onclick="humanDiscard('${selectedTileId}')" style="position:absolute;top:-28px;left:50%;transform:translateX(-50%);z-index:50;background:linear-gradient(90deg,#e67e22,#f39c12);color:#fff;padding:13px 34px;border-radius:14px;font-weight:bold;font-size:21px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.3)">打出 ${tileLabel(p.hand.find(t=>t.id===selectedTileId))}</div>`;
   }
   // 悬浮提示 - 吃/碰/杠/胡/过 按钮（别家弃牌时的响应）
   if(phase==='claiming'){
     let btns='';
     // 多个按钮横向一排，放在顶部悬浮位置
-    const btnStyle=';padding:10px 22px;border-radius:12px;font-weight:bold;font-size:17px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.25);margin:0 4px';
+    const btnStyle=';padding:13px 28px;border-radius:14px;font-weight:bold;font-size:20px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.25);margin:0 6px';
     if(canCLaimHu) btns+=`<div onclick="humanClaimHu()" style="display:inline-block;background:linear-gradient(90deg,#e74c3c,#c0392b);color:#fff${btnStyle}">胡牌</div>`;
     if(canClaimGang) btns+=`<div onclick="humanClaimGang()" style="display:inline-block;background:linear-gradient(90deg,#8e44ad,#9b59b6);color:#fff${btnStyle}">杠</div>`;
     if(canClaimPeng) btns+=`<div onclick="humanClaimPeng()" style="display:inline-block;background:linear-gradient(90deg,#f39c12,#e67e22);color:#fff${btnStyle}">碰</div>`;
