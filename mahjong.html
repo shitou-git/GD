@@ -39,9 +39,9 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
   .score{font-size:9px !important}
   .dealer-tag{font-size:8px !important;padding:1px 3px !important}
   .hand{gap:2px !important;min-height:auto !important;margin-top:3px !important}
-  .center-panel{padding:6px !important;min-height:140px !important;height:140px !important;min-width:360px !important;max-width:360px !important}
+  .center-panel{padding:6px !important;min-height:180px !important;height:180px !important;min-width:420px !important;max-width:420px !important}
   .center-panel h2{font-size:14px !important}
-  .center-discards{width:340px !important;min-height:130px !important;max-height:130px !important}
+  .center-discards{width:400px !important;min-height:180px !important;max-height:180px !important;gap:2px 1px !important;padding:6px !important}
   .tip{font-size:11px !important}
 }
 
@@ -126,15 +126,19 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 /* 吃碰杠区域 */
 .meld-area{display:flex;flex-wrap:wrap;gap:3px;margin:3px 0;min-height:28px}
 .meld-group{display:flex;align-items:flex-end;gap:1px;background:#e0e0e0;padding:2px 3px;border-radius:4px;font-size:9px;color:#666}
-.meld-group .tile-face-small{width:calc(var(--tile-width)*0.55);height:calc(var(--tile-height)*0.55);font-size:calc(var(--tile-font-size)*0.55)}
-.meld-group .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.55)}
+.meld-group .tile-face-small{width:calc(var(--tile-width)*0.45);height:calc(var(--tile-height)*0.45);font-size:calc(var(--tile-font-size)*0.45)}
+.meld-group .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.45)}
 .meld-group span:last-child{font-size:8px;color:#666;margin-left:2px}
+/* 杠牌组稍大，突出4张牌 */
+.meld-group.gang .tile-face-small{width:calc(var(--tile-width)*0.5);height:calc(var(--tile-height)*0.5);font-size:calc(var(--tile-font-size)*0.5)}
+.meld-group.gang .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.5)}
+.meld-group.gang{padding:2px 4px}
 
-/* 中央弃牌区 */
-.center-discards{display:flex;flex-wrap:wrap;gap:2px 2px;justify-content:center;align-content:center;align-items:center;padding:6px;border:1px dashed rgba(200,200,200,.4);border-radius:8px;margin:0 auto;width:520px;min-height:180px;max-height:180px;z-index:1;position:relative;box-sizing:border-box;overflow:visible}
+/* 中央弃牌区（15张/行 × 5行，可放75张） */
+.center-discards{display:flex;flex-wrap:wrap;gap:3px 2px;align-content:center;align-items:center;justify-content:center;padding:10px;border:1.5px solid rgba(220,200,160,.5);border-radius:10px;margin:0 auto;width:600px;min-height:230px;max-height:230px;z-index:1;position:relative;box-sizing:border-box;overflow:visible}
 .center-discard-tile{display:inline-block;position:relative;z-index:1}
-.center-discard-tile .tile-face{width:calc(var(--tile-width)*0.7);height:calc(var(--tile-height)*0.7);font-size:calc(var(--tile-font-size)*0.7)}
-.center-discard-tile .tile-face .sub{font-size:calc(var(--tile-sub-font)*0.7)}
+.center-discard-tile .tile-face{width:calc(var(--tile-width)*0.55);height:calc(var(--tile-height)*0.55);font-size:calc(var(--tile-font-size)*0.55)}
+.center-discard-tile .tile-face .sub{font-size:calc(var(--tile-sub-font)*0.55)}
 
 /* 手牌区域 */
 .hand{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:auto;min-height:80px;align-items:center}
@@ -159,7 +163,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 }
 .center-panel{
   background:transparent;border:1px solid rgba(200,200,200,.8);border-radius:12px;padding:8px 12px;
-  min-width:560px;min-height:200px;height:200px;max-width:560px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;box-sizing:border-box;
+  min-width:640px;min-height:240px;height:240px;max-width:640px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;box-sizing:border-box;
 }
 .center-panel>*{position:relative}
 .center-discards{z-index:1;position:relative}
@@ -1197,8 +1201,8 @@ function render(){
   html+=`<div style="grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center">
     <div class="player-panel side${currentIdx===3&&phase==='playing'?' current':''}" style="min-height:180px">
       <div class="player-name">${p3.name}${p3.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p3.score}分</span></div>
-      <div class="meld-area">
-        ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+      <div class="meld-area" style="gap:2px 3px">
+        ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
       <div class="hand side-hand">${p3HandHtml}</div>
     </div>
@@ -1210,8 +1214,8 @@ function render(){
   
     html+=`<div style="grid-column:2;grid-row:1;display:flex;justify-content:center;align-items:flex-start;padding-top:6px">
     <div class="player-panel${currentIdx===2&&phase==='playing'?' current':''}" style="width:560px;height:auto;padding:4px 10px;box-sizing:border-box">
-      <div class="meld-area" style="min-height:12px;margin:2px 0">
-        ${p2.melds.length?p2.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+      <div class="meld-area" style="gap:2px 3px">
+        ${p2.melds.length?p2.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
       <div class="hand" style="width:500px;min-height:60px;flex-wrap:nowrap;overflow:hidden">${p2HandHtml}</div>  
         </div>
@@ -1223,8 +1227,8 @@ function render(){
   html+=`<div style="grid-column:3;grid-row:2;display:flex;align-items:center;justify-content:center">
     <div class="player-panel side${currentIdx===1&&phase==='playing'?' current':''}" style="min-height:180px">
       <div class="player-name">${p1.name}${p1.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p1.score}分</span></div>
-      <div class="meld-area">
-        ${p1.melds.length?p1.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+      <div class="meld-area" style="gap:2px 3px">
+        ${p1.melds.length?p1.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
       <div class="hand side-hand">${p1HandHtml}</div>
     </div>
@@ -1260,27 +1264,6 @@ function render(){
     if(canHiddenGang) html+=`<button class="btn btn-info" onclick="humanHiddenGang()">暗杠</button>`;
     if(findGangFromPeng(state.players[0].hand,state.players[0].melds)) html+=`<button class="btn btn-info" onclick="humanGangFromPeng()">补杠</button>`;
     html+=`</div>`;
-    // 听牌提示：玩家回合时判断打哪张后能听牌（支持有吃碰杠的情况）
-    const expectedHandSize=14-3*p.melds.length; // 0 meld→14 张, 1 meld→11 张, 2 meld→8 张...
-    if(!canSelfHu&&p.hand.length===expectedHandSize){
-      const winningHints=[];
-      for(const td of p.hand){
-        const rem=p.hand.filter(t=>t.id!==td.id);
-        const wins=getWinningTiles(rem,p.melds);
-        if(wins.length>0) winningHints.push({discard:td,wins});
-      }
-      if(winningHints.length>0){
-        html+=`<div class="tip" style="margin-top:6px;text-align:center;color:#bbb">听牌：`;
-        winningHints.slice(0,3).forEach(h=>{
-          const ws=h.wins.map(t=>tileLabel(t)).join('、');
-          html+=`<span style="margin:0 8px">打 <b style="color:#f0c040">${tileLabel(h.discard)}</b> → 听 <b style="color:#4ade80">${ws}</b></span>`;
-        });
-        if(winningHints.length>3) html+=`<span style="color:#888">(共${winningHints.length}种)</span>`;
-        html+=`</div>`;
-      } else {
-        html+=`<div class="tip" style="margin-top:6px;text-align:center;color:#888">尚未听牌，选张最没用的牌打出</div>`;
-      }
-    }
   }
   html+=`</div></div>`;
 
@@ -1297,9 +1280,31 @@ function render(){
   html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:800px;height:auto;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
     <div class="meld-area">
-      ${p.melds.length?p.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
-    </div>
-    <div class="hand">`;
+      ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+    </div>`;
+  // 听牌提示（放在手牌面板内，手牌上方）
+  if(phase==='playing'&&isHumanTurn&&!canSelfHu){
+    const expectedHandSize=14-3*p.melds.length;
+    if(p.hand.length===expectedHandSize){
+      const winningHints=[];
+      for(const td of p.hand){
+        const wins=getWinningTiles(p.hand.filter(t=>t.id!==td.id),p.melds);
+        if(wins.length>0) winningHints.push({discard:td,wins});
+      }
+      if(winningHints.length>0){
+        html+=`<div class="tip" style="margin:4px 0 2px 0;text-align:center;color:#d0c0a0;font-size:12px">听牌：`;
+        winningHints.slice(0,3).forEach(h=>{
+          const ws=h.wins.map(t=>tileLabel(t)).join('、');
+          html+=`<span style="margin:0 8px">打 <b style="color:#f0c040">${tileLabel(h.discard)}</b> → 听 <b style="color:#4ade80">${ws}</b></span>`;
+        });
+        if(winningHints.length>3) html+=`<span style="color:#888">(共${winningHints.length}种)</span>`;
+        html+=`</div>`;
+      } else {
+        html+=`<div class="tip" style="margin:4px 0 2px 0;text-align:center;color:#888;font-size:12px">尚未听牌，选张最没用的牌打出</div>`;
+      }
+    }
+  }
+  html+=`<div class="hand">`;
   p.hand.forEach(t=>{
     const sel=selectedTileId===t.id;
     const isDrawn=t.id===state.lastDrawnTileId;
