@@ -670,7 +670,7 @@ function newGame(){
 function turnLoop(){
   if(state.phase!=='playing') return;
   const idx=state.currentIdx;
-  // 摸牌（吃/碰/杠后进入自己回合不需要摸牌）
+  // 摸牌（吃/碰/杠后 needsDraw=false，不会进入此处）
   if(state.needsDraw){
     if(state.wall.length===0){
       state.phase='draw';
@@ -678,17 +678,16 @@ function turnLoop(){
       render();return;
     }
     if(idx===0){
-      // 人类摸牌：直接调用 humanDraw 来处理（处理摸牌+高亮+重置 needsDraw）
+      // 人类摸牌：humanDraw 内部会重置 needsDraw=false 并 render
       humanDraw();
       return; // 等待人类操作
     }
     const drawn=state.wall.pop();
     state.players[idx].hand=sortTiles([...state.players[idx].hand,drawn]);
     state.log.push(`${PLAYER_NAMES[idx]}摸牌`);
-  } else {
-    state.needsDraw=true;
+    state.needsDraw=false;
   }
-  if(idx===0) return; // 玩家回合（吃/碰/杠后已在自己回合），等待操作
+  if(idx===0) return; // 玩家回合（needsDraw=false 时也是玩家在自己的回合），等待操作
 
   // AI 自摸
   if(canHuInner(state.players[idx].hand,state.players[idx].melds,null)){
@@ -937,7 +936,7 @@ function humanDiscard(tileId){
     render();
     setTimeout(aiClaimPhase,600);
   } else {
-    state.currentIdx=1;
+    state.currentIdx=(state.lastDiscarder+1)%4;
     state.lastDiscard=null;
     state.lastDiscarder=-1;
     state.phase='playing';
@@ -1261,8 +1260,9 @@ function render(){
     if(canHiddenGang) html+=`<button class="btn btn-info" onclick="humanHiddenGang()">暗杠</button>`;
     if(findGangFromPeng(state.players[0].hand,state.players[0].melds)) html+=`<button class="btn btn-info" onclick="humanGangFromPeng()">补杠</button>`;
     html+=`</div>`;
-    // 听牌提示：手牌 14 张且未自摸时，提示打哪张后能听什么
-    if(!canSelfHu&&p.hand.length===14){
+    // 听牌提示：玩家回合时判断打哪张后能听牌（支持有吃碰杠的情况）
+    const expectedHandSize=14-3*p.melds.length; // 0 meld→14 张, 1 meld→11 张, 2 meld→8 张...
+    if(!canSelfHu&&p.hand.length===expectedHandSize){
       const winningHints=[];
       for(const td of p.hand){
         const rem=p.hand.filter(t=>t.id!==td.id);
@@ -1304,7 +1304,7 @@ function render(){
     const sel=selectedTileId===t.id;
     const isDrawn=t.id===state.lastDrawnTileId;
     const isHuTile=t.id===huTileId;
-    const disabled=!(phase==='playing'&&currentIdx===0);
+    const disabled=!(phase==='playing'&&currentIdx===0&&!state.needsDraw);
     // 胡牌时那张牌最突出；选中的牌次之；摸到的牌再次之
     let extraStyle='';
     if(isHuTile){
