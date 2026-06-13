@@ -26,23 +26,57 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
     --tile-border-radius: 5px;
     --tile-back-icon: 18px;
   }
-  .header-bar{font-size:14px !important;padding:6px 8px !important}
-  .header-bar .btn{padding:4px 8px !important;font-size:11px !important}
-  .player-panel{padding:4px 6px !important}
-  .side-panel{max-width:140px}
-  .side-hand{gap:2px 2px !important;padding:2px 1px !important}
-  .tile-face-small{width:calc(var(--tile-width)*0.7)!important;height:calc(var(--tile-height)*0.7)!important;font-size:calc(var(--tile-font-size)*0.7)!important}
-  .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.7)!important}
-  .discard-area{gap:2px !important;padding-top:4px !important;margin-top:4px !important}
-  .meld-group{padding:2px 3px !important;font-size:8px !important;gap:1px !important}
-  .player-name{font-size:11px !important;margin-bottom:2px !important;gap:3px !important}
-  .score{font-size:9px !important}
-  .dealer-tag{font-size:8px !important;padding:1px 3px !important}
-  .hand{gap:2px !important;min-height:auto !important;margin-top:3px !important}
-  .center-panel{padding:6px !important;min-height:180px !important;height:180px !important;min-width:420px !important;max-width:420px !important}
-  .center-panel h2{font-size:14px !important}
-  .center-discards{width:400px !important;min-height:180px !important;max-height:180px !important;gap:2px 1px !important;padding:6px !important}
-  .tip{font-size:11px !important}
+  .game-grid{grid-template-columns:1fr 2.2fr 1fr !important;grid-template-rows:130px 170px 220px !important;gap:6px !important;max-width:760px !important}
+  .header-bar{font-size:14px;padding:6px 8px}
+  .header-bar .btn{padding:4px 8px;font-size:11px}
+  /* 四家面板：清空内联大宽度，改成移动端合适尺寸 */
+  .top-panel{width:92% !important;max-width:420px !important;min-height:110px !important;padding:4px 8px !important}
+  .top-panel .hand{width:100% !important;min-height:60px !important;flex-wrap:nowrap !important;overflow:hidden}
+  .bottom-panel{width:96% !important;max-width:700px !important;min-height:110px !important;padding:4px 8px !important}
+  .bottom-panel .hand{width:100% !important;min-height:70px !important}
+  .left-panel,.right-panel{height:170px !important;min-height:170px !important;max-width:none !important;padding:4px 6px !important}
+  .left-panel .hand.side-hand,.right-panel .hand.side-hand{gap:1px 1px !important;min-height:100px !important}
+  /* 中央弃牌区 */
+  .center-panel{padding:4px !important;min-height:150px !important;height:150px !important;min-width:auto !important;max-width:100% !important;width:95%}
+  .center-panel h2{font-size:14px}
+  .center-discards{width:100% !important;max-width:480px !important;min-height:150px !important;max-height:150px !important;gap:2px 1px !important;padding:4px !important}
+  /* 牌尺寸 */
+  .tile-face-small{width:calc(var(--tile-width)*0.6)!important;height:calc(var(--tile-height)*0.6)!important;font-size:calc(var(--tile-font-size)*0.6)!important}
+  .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.6)!important}
+  /* side-melds 紧凑：一行两组、牌更小 */
+  .side-melds{gap:2px 3px !important;min-height:20px !important;margin:2px 0 !important}
+  .side-melds .meld-group{padding:1px 2px !important;font-size:8px !important;gap:1px !important}
+  .side-melds .meld-group .tile-face-small{width:calc(var(--tile-width)*0.38)!important;height:calc(var(--tile-height)*0.38)!important;font-size:calc(var(--tile-font-size)*0.38)!important}
+  .side-melds .meld-group .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.38)!important}
+  .side-melds .meld-group.gang .tile-face-small{width:calc(var(--tile-width)*0.42)!important;height:calc(var(--tile-height)*0.42)!important;font-size:calc(var(--tile-font-size)*0.42)!important}
+  .side-melds .meld-group.gang .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.42)!important}
+  /* 其他基础 */
+  .meld-group{padding:2px 3px;font-size:8px;gap:1px}
+  .player-name{font-size:11px;margin-bottom:2px;gap:3px}
+  .score{font-size:9px}
+  .dealer-tag{font-size:8px;padding:1px 3px}
+  .hand{gap:2px;min-height:auto;margin-top:3px}
+  .tip{font-size:11px}
+  /* 说明栏 */
+  .game-grid .rule-panel{width:98% !important;max-width:700px !important;padding:6px 10px !important}
+}
+@media (max-width: 480px){
+  :root{
+    --tile-width: 28px;
+    --tile-height: 38px;
+    --tile-font-size: 11px;
+    --tile-sub-font: 8px;
+    --tile-border-radius: 4px;
+    --tile-back-icon: 14px;
+  }
+  .game-grid{grid-template-columns:1fr 2fr 1fr !important;grid-template-rows:120px 150px 190px !important;gap:4px !important}
+  .top-panel{width:96% !important;min-height:100px !important;padding:3px 6px !important}
+  .bottom-panel{width:98% !important;min-height:100px !important;padding:3px 6px !important}
+  .left-panel,.right-panel{height:150px !important;min-height:150px !important;padding:3px 5px !important}
+  .center-panel{min-height:130px !important;height:130px !important;padding:3px !important}
+  .center-discards{max-width:280px !important;min-height:130px !important;max-height:130px !important;padding:3px !important}
+  .player-name{font-size:10px !important}
+  .score{font-size:8px !important}
 }
 
 .tile{
@@ -1238,7 +1272,7 @@ function render(){
     </div>
   </div>`;
 
-  html+=`<div style="display:grid;grid-template-columns:1fr 3fr 1fr;grid-template-rows:160px 200px 240px;gap:10px;width:100%;max-width:1200px">`;
+  html+=`<div class="game-grid" style="display:grid;grid-template-columns:1fr 3fr 1fr;grid-template-rows:160px 200px 240px;gap:10px;width:100%;max-width:1200px">`;
   // 游戏结束时所有玩家明牌
   const isEnded=phase==='ended';
   // 获取胡牌的牌（用于在赢家手牌中放大显示）
@@ -1253,12 +1287,12 @@ function render(){
   const p3=players[3];
   const p3HandHtml=isEnded?(p3.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===3&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p3.hand.map(()=>tileBackHTML()).join('');
   html+=`<div style="grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center">
-    <div class="player-panel side${currentIdx===3&&phase==='playing'?' current':''}" style="min-height:180px">
+    <div class="player-panel side left-panel${currentIdx===3&&phase==='playing'?' current':''}" style="height:180px;min-height:180px">
       <div class="player-name">${p3.name}${p3.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p3.score}分</span></div>
-      <div class="meld-area" style="gap:2px 3px;justify-content:flex-end">
-        ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+      <div class="meld-area side-melds" style="justify-content:flex-end">
+        ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
-      <div class="hand side-hand">${p3HandHtml}</div>
+      <div class="hand side-hand" style="height:auto;min-height:110px;overflow:hidden">${p3HandHtml}</div>
     </div>
   </div>`;
 
@@ -1267,7 +1301,7 @@ function render(){
   const p2HandHtml=isEnded?(p2.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===2&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p2.hand.map(()=>tileBackHTML(true)).join('');
   
     html+=`<div style="grid-column:2;grid-row:1;display:flex;justify-content:center;align-items:flex-start;padding-top:6px">
-    <div class="player-panel${currentIdx===2&&phase==='playing'?' current':''}" style="width:480px;min-height:120px;padding:4px 8px;box-sizing:border-box">
+    <div class="player-panel top-panel${currentIdx===2&&phase==='playing'?' current':''}" style="width:480px;min-height:120px;padding:4px 8px;box-sizing:border-box">
       <div class="player-name" style="margin-bottom:2px">${p2.name}${p2.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p2.score}分</span></div>
       <div class="meld-area side-melds">
         ${p2.melds.length?p2.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
@@ -1280,12 +1314,12 @@ function render(){
   const p1=players[1];
   const p1HandHtml=isEnded?(p1.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===1&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p1.hand.map(()=>tileBackHTML()).join('');
   html+=`<div style="grid-column:3;grid-row:2;display:flex;align-items:center;justify-content:center">
-    <div class="player-panel side${currentIdx===1&&phase==='playing'?' current':''}" style="min-height:180px">
+    <div class="player-panel side right-panel${currentIdx===1&&phase==='playing'?' current':''}" style="height:180px;min-height:180px">
       <div class="player-name">${p1.name}${p1.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p1.score}分</span></div>
-      <div class="meld-area" style="gap:2px 3px">
-        ${p1.melds.length?p1.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+      <div class="meld-area side-melds">
+        ${p1.melds.length?p1.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
-      <div class="hand side-hand">${p1HandHtml}</div>
+      <div class="hand side-hand" style="height:auto;min-height:110px;overflow:hidden">${p1HandHtml}</div>
     </div>
   </div>`;
 
@@ -1334,7 +1368,7 @@ function render(){
       html+=`<div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;justify-content:center">${btns}</div>`;
     }
   }
-  html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:880px;min-height:120px;padding:4px 8px;position:relative;box-sizing:border-box">
+  html+=`<div class="player-panel bottom-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:880px;min-height:120px;padding:4px 8px;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
     <div class="meld-area side-melds">
       ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
@@ -1390,7 +1424,7 @@ function render(){
   html+=`</div></div></div>`;
 
   // 玩法说明
-  html+=`<div style="grid-column:1/4;margin-top:8px;width:100%;max-width:1100px;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px">
+  html+=`<div class="rule-panel" style="grid-column:1/4;margin-top:8px;width:100%;max-width:1100px;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px">
     <div style="color:#fff;font-size:12px;font-weight:bold;margin-bottom:6px">🎮 玩法说明</div>
     <div style="color:#ccc;font-size:11px;line-height:1.6">
       <div><b>基本规则：</b>摸牌→选牌→打出，与其他三家轮流出牌</div>
