@@ -135,7 +135,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 .meld-group.gang{padding:2px 4px}
 
 /* 中央弃牌区（15张/行 × 5行，可放75张） */
-.center-discards{display:flex;flex-wrap:wrap;gap:3px 2px;align-content:center;align-items:center;justify-content:center;padding:4px;border-radius:8px;margin:0 auto;width:600px;min-height:200px;max-height:200px;z-index:1;position:relative;box-sizing:border-box;overflow:visible}
+.center-discards{display:flex;flex-wrap:wrap;gap:3px 2px;align-content:flex-start;align-items:flex-start;justify-content:flex-start;padding:6px;border-radius:8px;margin:0;width:600px;min-height:200px;max-height:220px;z-index:1;position:relative;box-sizing:border-box;overflow:visible}
 .center-discard-tile{display:inline-block;position:relative;z-index:1}
 .center-discard-tile .tile-face{width:calc(var(--tile-width)*0.55);height:calc(var(--tile-height)*0.55);font-size:calc(var(--tile-font-size)*0.55)}
 .center-discard-tile .tile-face .sub{font-size:calc(var(--tile-sub-font)*0.55)}
@@ -1291,19 +1291,8 @@ function render(){
     html+=`</div>`;
   }
 
-  // 操作按钮区域（吃碰杠/自摸暗杠/出牌）
-  if(phase==='claiming'){
-    html+=`<div class="action-row">`;
-    if(canCLaimHu) html+=`<button class="btn btn-danger" onclick="humanClaimHu()">胡牌</button>`;
-    if(canClaimGang) html+=`<button class="btn btn-info" onclick="humanClaimGang()">杠</button>`;
-    if(canClaimPeng) html+=`<button class="btn btn-warning" onclick="humanClaimPeng()">碰</button>`;
-    chiOpts.forEach((opt,i)=>{
-      const combo=[...opt.tiles,lastDiscard].sort((a,b)=>a.value-b.value).map(t=>tileLabel(t)).join('');
-      html+=`<button class="btn btn-primary" onclick="humanClaimChi(${i})">吃 ${combo}</button>`;
-    });
-    if(canPass) html+=`<button class="btn btn-secondary" onclick="humanPass()">过</button>`;
-    html+=`</div>`;
-  } else if(phase==='playing'&&isHumanTurn){
+  // 操作按钮区域（自摸/暗杠/补杠）
+  if(phase==='playing'&&isHumanTurn){
     html+=`<div class="action-row">`;
     if(canSelfHu) html+=`<button class="btn btn-danger" onclick="humanSelfHu()">自摸</button>`;
     if(canHiddenGang) html+=`<button class="btn btn-info" onclick="humanHiddenGang()">暗杠</button>`;
@@ -1314,9 +1303,26 @@ function render(){
 
   // 玩家手牌(底部) - 外层加 position:relative 用于悬浮定位
   html+=`<div style="grid-column:1/4;grid-row:3;display:flex;justify-content:center;align-items:center;position:relative">`;
-  // 悬浮提示 - 仅在选中牌时显示"打出"按钮
+  // 悬浮提示 - 玩家回合打出按钮（选中牌时）
   if(phase==='playing'&&isHumanTurn&&!state.needsDraw&&selectedTileId){
     html+=`<div onclick="humanDiscard('${selectedTileId}')" style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;background:linear-gradient(90deg,#e67e22,#f39c12);color:#fff;padding:10px 28px;border-radius:12px;font-weight:bold;font-size:18px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.3)">打出 ${tileLabel(p.hand.find(t=>t.id===selectedTileId))}</div>`;
+  }
+  // 悬浮提示 - 吃/碰/杠/胡/过 按钮（别家弃牌时的响应）
+  if(phase==='claiming'){
+    let btns='';
+    // 多个按钮横向一排，放在顶部悬浮位置
+    const btnStyle=';padding:10px 22px;border-radius:12px;font-weight:bold;font-size:17px;box-shadow:0 4px 18px rgba(0,0,0,.4);white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.25);margin:0 4px';
+    if(canCLaimHu) btns+=`<div onclick="humanClaimHu()" style="display:inline-block;background:linear-gradient(90deg,#e74c3c,#c0392b);color:#fff${btnStyle}">胡牌</div>`;
+    if(canClaimGang) btns+=`<div onclick="humanClaimGang()" style="display:inline-block;background:linear-gradient(90deg,#8e44ad,#9b59b6);color:#fff${btnStyle}">杠</div>`;
+    if(canClaimPeng) btns+=`<div onclick="humanClaimPeng()" style="display:inline-block;background:linear-gradient(90deg,#f39c12,#e67e22);color:#fff${btnStyle}">碰</div>`;
+    chiOpts.forEach((opt,i)=>{
+      const combo=[...opt.tiles,lastDiscard].sort((a,b)=>a.value-b.value).map(t=>tileLabel(t)).join('');
+      btns+=`<div onclick="humanClaimChi(${i})" style="display:inline-block;background:linear-gradient(90deg,#3498db,#2980b9);color:#fff${btnStyle}">吃${combo}</div>`;
+    });
+    if(canPass) btns+=`<div onclick="humanPass()" style="display:inline-block;background:linear-gradient(90deg,#7f8c8d,#95a5a6);color:#fff${btnStyle}">过</div>`;
+    if(btns){
+      html+=`<div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;justify-content:center">${btns}</div>`;
+    }
   }
   html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:800px;min-height:160px;padding:6px 12px;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
