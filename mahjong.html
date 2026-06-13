@@ -133,6 +133,16 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 .meld-group.gang .tile-face-small{width:calc(var(--tile-width)*0.5);height:calc(var(--tile-height)*0.5);font-size:calc(var(--tile-font-size)*0.5)}
 .meld-group.gang .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.5)}
 .meld-group.gang{padding:2px 4px}
+/* 东西两家 melds：一行2组，杠单独一行，牌面更紧凑 */
+.side-melds{display:grid;grid-template-columns:repeat(2,auto);justify-content:center;gap:2px 4px;min-height:24px;margin:2px 0}
+.side-melds .meld-group{gap:1px;padding:1px 2px;font-size:8px}
+.side-melds .meld-group.gang{padding:1px 3px}
+.side-melds .meld-group .tile-face-small{width:calc(var(--tile-width)*0.4);height:calc(var(--tile-height)*0.4);font-size:calc(var(--tile-font-size)*0.4)}
+.side-melds .meld-group .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.4)}
+.side-melds .meld-group.gang .tile-face-small{width:calc(var(--tile-width)*0.45);height:calc(var(--tile-height)*0.45);font-size:calc(var(--tile-font-size)*0.45)}
+.side-melds .meld-group.gang .tile-face-small .sub{font-size:calc(var(--tile-sub-font)*0.45)}
+.side-melds .meld-group[style*="grid-column"]{grid-column:1/-1;justify-self:center}
+.side-melds .gang-full{grid-column:1/-1;justify-self:center}
 
 /* 中央弃牌区（15张/行 × 5行，可放75张） */
 .center-discards{display:flex;flex-wrap:wrap;gap:3px 2px;align-content:flex-start;align-items:flex-start;justify-content:flex-start;padding:6px;border-radius:8px;margin:0;width:600px;min-height:200px;max-height:220px;z-index:1;position:relative;box-sizing:border-box;overflow:visible}
@@ -1259,8 +1269,8 @@ function render(){
     html+=`<div style="grid-column:2;grid-row:1;display:flex;justify-content:center;align-items:flex-start;padding-top:6px">
     <div class="player-panel${currentIdx===2&&phase==='playing'?' current':''}" style="width:480px;min-height:120px;padding:4px 8px;box-sizing:border-box">
       <div class="player-name" style="margin-bottom:2px">${p2.name}${p2.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p2.score}分</span></div>
-      <div class="meld-area" style="gap:2px 3px;min-height:24px;margin:2px 0">
-        ${p2.melds.length?p2.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+      <div class="meld-area side-melds">
+        ${p2.melds.length?p2.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
       <div class="hand" style="width:460px;min-height:60px;flex-wrap:nowrap;overflow:hidden">${p2HandHtml}</div>  
         </div>
@@ -1326,8 +1336,8 @@ function render(){
   }
   html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:880px;min-height:120px;padding:4px 8px;position:relative;box-sizing:border-box">
   <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
-    <div class="meld-area">
-      ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
+    <div class="meld-area side-melds">
+      ${p.melds.length?p.melds.map(m=>`<span class="meld-group${m.type==='gang'?' gang gang-full':''}">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
     </div>`;
   // 听牌提示（仅当手牌可胡时显示，悬浮在外层面板顶部，不影响布局）
   let winningHint='';
