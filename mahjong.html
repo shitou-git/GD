@@ -723,8 +723,6 @@ function turnLoop(){
     const drawn=state.wall.pop();
     state.players[idx].hand=sortTiles([...state.players[idx].hand,drawn]);
     state.log.push(`${PLAYER_NAMES[idx]}摸牌`);
-  } else {
-    state.needsDraw=true;
   }
   if(idx===0) return; // 玩家回合（吃/碰/杠后已在自己回合），等待操作
 
