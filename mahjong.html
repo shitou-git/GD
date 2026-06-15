@@ -593,9 +593,32 @@ function aiDecide(hand,melds,t,isUpstream){
 }
 
 // ========== 游戏状态 ==========
-// 记录跨局的庄家索引与累积分数（第一局庄家为 0，之后按连庄规则更新）
+// 永久总分：保存到 localStorage，跨页面/跨浏览器不丢失
 let persistentDealerIdx=0;
 let persistentScores=[0,0,0,0];
+// 本局开始时的永久总分（用来计算"本局变动 = 当前分 - 本局起始分"）
+let roundStartScores=[0,0,0,0];
+
+function _loadTotalScores(){
+  try{
+    const raw=localStorage.getItem('mahjong_total_scores');
+    if(raw){
+      const arr=JSON.parse(raw);
+      if(Array.isArray(arr)&&arr.length===4&&arr.every(n=>typeof n==='number')){
+        return arr.slice();
+      }
+    }
+  }catch(e){}
+  return [0,0,0,0];
+}
+function _saveTotalScores(scores){
+  try{
+    localStorage.setItem('mahjong_total_scores',JSON.stringify(scores));
+  }catch(e){}
+}
+function _clearTotalScores(){
+  try{localStorage.removeItem('mahjong_total_scores');}catch(e){}
+}
 
 const state={
   players:[],
@@ -633,8 +656,15 @@ function newGame(){
         persistentDealerIdx=(prevDealer+1)%4; // 其他情况，下家做庄
       }
     }
+    // 上局结束后，把玩家当前分作为新的永久总分，并保存
     persistentScores=state.players.map(p=>p.score||0);
+    _saveTotalScores(persistentScores);
+  } else {
+    // 首次启动页面：从 localStorage 恢复永久总分
+    persistentScores=_loadTotalScores();
   }
+  // 记录本局开始时的分数，用于计算"本局得分变动 = 玩家当前分 - 本局起始分"
+  roundStartScores=persistentScores.slice();
 
   state.wall=shuffle(mkWall());
   state.players=[];
@@ -1171,6 +1201,17 @@ function render(){
   const {players,phase,currentIdx,lastDiscard,lastDiscarder,pending,winnerIdx,huInfo,log,selectedTileId}=state;
   const p=players[0];
   const isHumanTurn=phase==='playing'&&currentIdx===0;
+  // 计算每位玩家的本局得分变动（当前总分 - 本局开始时总分）
+  function getRoundDelta(idx){
+    if(!players[idx]) return 0;
+    return (players[idx].score||0)-roundStartScores[idx];
+  }
+  // 格式化得分变动：+N 或 -N
+  function fmtDelta(d){
+    if(d>0) return `<span style="color:#f0c040">+${d}</span>`;
+    if(d<0) return `<span style="color:#ff6b6b">${d}</span>`;
+    return `<span style="color:#888">0</span>`;
+  }
 
   const canSelfHu=isHumanTurn&&canHuInner(p.hand,p.melds,null);
   const canHiddenGang=isHumanTurn&&findHiddenGang(p.hand)!==null;
@@ -1185,6 +1226,7 @@ function render(){
     <div style="font-size:22px;font-weight:bold">🀄 广东麻将</div>
     <div style="display:flex;align-items:center;gap:16px">
       <span>牌墙剩余: <b>${state.wall.length}</b></span>
+      <button class="btn btn-danger" onclick="resetTotalScores()">重置总分</button>
       <button class="btn btn-warning" onclick="newGame()">新的一局</button>
     </div>
   </div>`;
@@ -1205,7 +1247,7 @@ function render(){
   const p3HandHtml=isEnded?(p3.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===3&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p3.hand.map(()=>tileBackHTML()).join('');
   html+=`<div style="grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center">
     <div class="player-panel side${currentIdx===3&&phase==='playing'?' current':''}" style="min-height:180px">
-      <div class="player-name">${p3.name}${p3.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p3.score}分</span></div>
+      <div class="player-name">${p3.name}${p3.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">累计 ${p3.score}分 | 本局${fmtDelta(getRoundDelta(3))}</span></div>
       <div class="meld-area">
         ${p3.melds.length?p3.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
@@ -1219,6 +1261,7 @@ function render(){
   
     html+=`<div style="grid-column:2;grid-row:1;display:flex;justify-content:center;align-items:flex-start;padding-top:6px">
     <div class="player-panel${currentIdx===2&&phase==='playing'?' current':''}" style="width:640px;height:auto;padding:4px 10px;box-sizing:border-box">
+      <div class="player-name" style="margin-bottom:2px">${p2.name}${p2.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">累计 ${p2.score}分 | 本局${fmtDelta(getRoundDelta(2))}</span></div>
       <div class="meld-area" style="min-height:12px;margin:2px 0">
         ${p2.melds.length?p2.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
@@ -1228,10 +1271,10 @@ function render(){
 
   // 右玩家(东家) - 跨两行
   const p1=players[1];
-  const p1HandHtml=isEnded?(p1.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===1&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:'')):p1.hand.map(()=>tileBackHTML()).join('');
+  const p1HandHtml=isEnded?(p1.hand.map(t=>`<span class="${t.id===huTileId?'hu-tile-enlarge':''}">${tileFaceHTML(t,false,true)}</span>`).join('')+(winnerIdx===1&&huTile?`<span class="hu-tile-enlarge">${tileFaceHTML(huTile,false,true)}</span>`:''):p1.hand.map(()=>tileBackHTML()).join('');
   html+=`<div style="grid-column:3;grid-row:2;display:flex;align-items:center;justify-content:center">
     <div class="player-panel side${currentIdx===1&&phase==='playing'?' current':''}" style="min-height:180px">
-      <div class="player-name">${p1.name}${p1.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p1.score}分</span></div>
+      <div class="player-name">${p1.name}${p1.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">累计 ${p1.score}分 | 本局${fmtDelta(getRoundDelta(1))}</span></div>
       <div class="meld-area">
         ${p1.melds.length?p1.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
       </div>
@@ -1299,7 +1342,7 @@ function render(){
     html+=`<div onclick="humanDiscard('${selectedTileId}')" style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);z-index:50;background:linear-gradient(90deg,#e67e22,#f39c12);color:#fff;padding:4px 18px;border-radius:8px;font-weight:bold;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap;cursor:pointer">打出 ${tileLabel(p.hand.find(t=>t.id===selectedTileId))}</div>`;
   }
   html+=`<div class="player-panel${currentIdx===0&&phase==='playing'?' current':''}" style="width:880px;height:auto;position:relative;box-sizing:border-box">
-  <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">${p.score}分</span> <span class="stat">手牌:${p.hand.length}</span></div>
+  <div class="player-name">${p.name}${p.isDealer?'<span class="dealer-tag">庄</span>':''} <span class="score">累计 ${p.score}分 | 本局${fmtDelta(getRoundDelta(0))}</span> <span class="stat">手牌:${p.hand.length}</span></div>
     <div class="meld-area">
       ${p.melds.length?p.melds.map(m=>`<span class="meld-group">${m.tiles.map(t=>tileFaceHTML(t,false,true)).join('')}<span>${m.type==='chi'?'吃':m.type==='peng'?'碰':'杠'}</span></span>`).join(''):''}
     </div>
@@ -1347,25 +1390,50 @@ function render(){
   let toastHtml='';
   // 胡牌悬浮提示
   if(phase==='ended'&&huInfo){
+    // 保存永久总分到 localStorage
+    const finalScores=players.map(pl=>pl.score||0);
+    _saveTotalScores(finalScores);
+    // 计算番数和得分：基础分 = 2^(fan-1)
+    const fan=huInfo.fan;
+    const baseScore=getScore(fan);
+    // 判断自摸还是点炮：如果有 lastDiscard 且 discard lastDiscarder >= 0，则点炮
+    let scoreLine='';
+    // 判断胡牌类型（由 winnerIdx 和 lastDiscard/lastDiscarder 推断）
+    if(state.lastDiscarder>=0&&state.lastDiscarder!==winnerIdx){
+      // 点炮胡：胡家+3*base，点炮家-3*base
+      const winAmount=baseScore*3;
+      scoreLine=`<div style="color:#f0c040">点炮 · ${fan}番 → ${baseScore}分/张 × 3 = <b>${winAmount}分</b></div>`;
+    } else {
+      // 自摸胡：胡家+3*base，其他三家各-base
+      const winAmount=baseScore*3;
+      scoreLine=`<div style="color:#f0c040">自摸 · ${fan}番 → ${baseScore}分/家 × 3家 = <b>${winAmount}分</b></div>`;
+    }
     toastHtml+=`<div class="floating-toast">
       <h3>🎉 ${players[winnerIdx].name} 胡牌！</h3>
       <div class="hu-pattern">${huInfo.patternName}</div>
-      <div class="hu-fan">${huInfo.fan} 番</div>
-      <div class="hu-scores"><table><tbody>`;
-    // 分数两列展示：北-南一列，东-西一列
-    toastHtml+=`<tr><td>北:${players[3].score}</td><td>南:${players[2].score}</td></tr>`;
-    toastHtml+=`<tr><td>东:${players[1].score}</td><td>西:${players[0].score}</td></tr>`;
+      <div class="hu-fan">${fan} 番</div>
+      ${scoreLine}
+      <div class="hu-scores" style="margin-top:10px"><table><tbody>`;
+    toastHtml+=`<tr><td>北家</td><td>${fmtDelta(getRoundDelta(3))}</td><td>累计 ${players[3].score}</td></tr>`;
+    toastHtml+=`<tr><td>南家</td><td>${fmtDelta(getRoundDelta(2))}</td><td>累计 ${players[2].score}</td></tr>`;
+    toastHtml+=`<tr><td>东家</td><td>${fmtDelta(getRoundDelta(1))}</td><td>累计 ${players[1].score}</td></tr>`;
+    toastHtml+=`<tr><td>西家</td><td>${fmtDelta(getRoundDelta(0))}</td><td>累计 ${players[0].score}</td></tr>`;
     toastHtml+=`</tbody></table></div>
       <button class="btn btn-primary" onclick="newGame()" style="margin-top:8px">再来一局</button>
     </div>`;
   }
   // 流局悬浮提示
   if(phase==='draw'){
+    // 流局也保存永久总分
+    const finalScores=players.map(pl=>pl.score||0);
+    _saveTotalScores(finalScores);
     toastHtml+=`<div class="floating-toast">
       <h3>🏁 流局</h3>
-      <div class="hu-scores"><table><tbody>`;
-    toastHtml+=`<tr><td>北:${players[3].score}</td><td>南:${players[2].score}</td></tr>`;
-    toastHtml+=`<tr><td>东:${players[1].score}</td><td>西:${players[0].score}</td></tr>`;
+      <div class="hu-scores" style="margin-top:10px"><table><tbody>`;
+    toastHtml+=`<tr><td>北家</td><td>${fmtDelta(getRoundDelta(3))}</td><td>累计 ${players[3].score}</td></tr>`;
+    toastHtml+=`<tr><td>南家</td><td>${fmtDelta(getRoundDelta(2))}</td><td>累计 ${players[2].score}</td></tr>`;
+    toastHtml+=`<tr><td>东家</td><td>${fmtDelta(getRoundDelta(1))}</td><td>累计 ${players[1].score}</td></tr>`;
+    toastHtml+=`<tr><td>西家</td><td>${fmtDelta(getRoundDelta(0))}</td><td>累计 ${players[0].score}</td></tr>`;
     toastHtml+=`</tbody></table></div>
       <button class="btn btn-primary" onclick="newGame()" style="margin-top:8px">再来一局</button>
     </div>`;
@@ -1377,6 +1445,16 @@ function selectTile(id){
   if(state.phase!=='playing'||state.currentIdx!==0) return;
   state.selectedTileId=state.selectedTileId===id?null:id;
   render();
+}
+
+// 重置永久总分：清 localStorage，清当前本局分数，重启游戏
+function resetTotalScores(){
+  if(!confirm('确定要重置累计总分吗？')) return;
+  _clearTotalScores();
+  persistentDealerIdx=0;
+  persistentScores=[0,0,0,0];
+  roundStartScores=[0,0,0,0];
+  newGame();
 }
 
 // 暴露到全局（供 HTML onclick 调用）
@@ -1391,6 +1469,7 @@ window.humanClaimPeng=humanClaimPeng;
 window.humanClaimChi=humanClaimChi;
 window.humanPass=humanPass;
 window.selectTile=selectTile;
+window.resetTotalScores=resetTotalScores;
 
 // 启动
 newGame();
