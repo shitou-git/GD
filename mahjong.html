@@ -187,11 +187,52 @@ body{min-height:100vh;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%)
 .chi-group{display:flex;gap:2px;align-items:flex-end}
 .action-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;position:relative;z-index:30}
 .tip{font-size:13px;color:#bbb;margin-top:6px;line-height:1.6}
+
+/* ===== 登录注册模态框样式 ===== */
+.auth-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:1000}
+.auth-modal{background:linear-gradient(145deg,#1a2a1a 0%,#0d1f0d 100%);border:2px solid #3a5a3a;border-radius:16px;padding:36px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.auth-modal h2{color:#f0e8d0;font-size:26px;margin-bottom:6px;font-weight:bold}
+.auth-modal .subtitle{color:#888;font-size:13px;margin-bottom:24px}
+.auth-input{width:100%;padding:14px 16px;margin:8px 0;border:1px solid #3a5a3a;border-radius:8px;background:rgba(0,0,0,.3);color:#f0e8d0;font-size:15px;box-sizing:border-box;transition:border-color .2s}
+.auth-input:focus{outline:none;border-color:#4ade80;box-shadow:0 0 12px rgba(74,222,128,.2)}
+.auth-input::placeholder{color:#666}
+.auth-btn{width:100%;padding:14px;margin:12px 0;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;transition:all .2s}
+.auth-btn-primary{background:linear-gradient(180deg,#4ade80 0%,#22c55e 100%);color:#0d1f0d}
+.auth-btn-primary:hover{background:linear-gradient(180deg,#5eead4 0%,#4ade80 100%);transform:translateY(-1px)}
+.auth-btn-secondary{background:rgba(255,255,255,.1);color:#aaa;border:1px solid #444}
+.auth-btn-secondary:hover{background:rgba(255,255,255,.15);color:#fff}
+.auth-switch{color:#888;font-size:13px;margin-top:16px}
+.auth-switch a{color:#4ade80;cursor:pointer;text-decoration:none}
+.auth-switch a:hover{text-decoration:underline}
+.auth-error{background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin:8px 0;display:none}
+.auth-success{background:rgba(74,222,128,.2);border:1px solid #4ade80;color:#86efac;padding:10px 14px;border-radius:8px;font-size:13px;margin:8px 0;display:none}
+.user-info-bar{background:rgba(0,0,0,.4);padding:8px 20px;border-radius:8px;display:flex;align-items:center;gap:12px;font-size:14px;color:#f0e8d0}
+.user-info-bar .username{font-weight:bold;color:#4ade80}
+.user-info-bar .logout-btn{background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#fca5a5;padding:4px 12px;border-radius:5px;font-size:12px;cursor:pointer}
+.user-info-bar .logout-btn:hover{background:rgba(239,68,68,.3)}
 </style>
 </head>
 <body>
 
 <div id="app" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:10px"></div>
+
+<!-- 登录注册模态框 -->
+<div id="authModal" class="auth-modal-overlay">
+  <div class="auth-modal">
+    <h2 id="authTitle">登录</h2>
+    <p class="subtitle" id="authSubtitle">登录后可以保存你的得分</p>
+    <div id="authError" class="auth-error"></div>
+    <div id="authSuccess" class="auth-success"></div>
+    <input type="text" id="authUsername" class="auth-input" placeholder="用户名" autocomplete="username">
+    <input type="password" id="authPassword" class="auth-input" placeholder="密码" autocomplete="current-password">
+    <div id="confirmPasswordGroup" style="display:none">
+      <input type="password" id="authConfirmPassword" class="auth-input" placeholder="确认密码" autocomplete="new-password">
+    </div>
+    <button class="auth-btn auth-btn-primary" id="authSubmitBtn" onclick="handleAuth()">登录</button>
+    <button class="auth-btn auth-btn-secondary" id="authSkipBtn" onclick="skipAuth()">游客模式</button>
+    <p class="auth-switch" id="authSwitch">没有账号？<a onclick="toggleAuthMode()">立即注册</a></p>
+  </div>
+</div>
 <div class="footer">@STONE</div>
 
 <script>
@@ -204,6 +245,194 @@ const WAN_CN = ['','一','二','三','四','五','六','七','八','九'];
 const FENG_CN = ['东','南','西','北'];
 const JIAN_CN = ['中','发','白'];
 const PLAYER_NAMES = ['你','东家','南家','北家'];
+
+// ========== API 配置 ==========
+const API_BASE = 'https://api.chatlz.dpdns.org/v1';
+
+// ========== 用户认证状态 ==========
+let currentUser = null;
+let authToken = null;
+let isRegisterMode = false;
+
+// 从 localStorage 恢复登录状态
+function loadAuthState() {
+  try {
+    const savedToken = localStorage.getItem('mahjong_auth_token');
+    const savedUser = localStorage.getItem('mahjong_auth_user');
+    if (savedToken && savedUser) {
+      authToken = savedToken;
+      currentUser = JSON.parse(savedUser);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function saveAuthState() {
+  try {
+    if (authToken && currentUser) {
+      localStorage.setItem('mahjong_auth_token', authToken);
+      localStorage.setItem('mahjong_auth_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('mahjong_auth_token');
+      localStorage.removeItem('mahjong_auth_user');
+    }
+  } catch(e) {}
+}
+
+function clearAuthState() {
+  authToken = null;
+  currentUser = null;
+  saveAuthState();
+}
+
+// ========== 认证 API 调用 ==========
+async function apiCall(endpoint, method = 'GET', body = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  const config = { method, headers };
+  if (body) config.body = JSON.stringify(body);
+  
+  const res = await fetch(`${API_BASE}${endpoint}`, config);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '请求失败');
+  return data;
+}
+
+async function register(username, password) {
+  const data = await apiCall('/auth/register', 'POST', { username, password });
+  authToken = data.token;
+  currentUser = data.user;
+  saveAuthState();
+  return data;
+}
+
+async function login(username, password) {
+  const data = await apiCall('/auth/login', 'POST', { username, password });
+  authToken = data.token;
+  currentUser = data.user;
+  saveAuthState();
+  return data;
+}
+
+async function fetchUserInfo() {
+  const data = await apiCall('/users/me');
+  currentUser = data.user;
+  saveAuthState();
+  return data;
+}
+
+async function updateScore(score, gamesPlayed, gamesWon) {
+  const data = await apiCall('/scores', 'PUT', { score, games_played: gamesPlayed, games_won: gamesWon });
+  currentUser = data.user;
+  saveAuthState();
+  return data;
+}
+
+// ========== 认证 UI 控制 ==========
+function showAuthModal() {
+  document.getElementById('authModal').style.display = 'flex';
+}
+
+function hideAuthModal() {
+  document.getElementById('authModal').style.display = 'none';
+}
+
+function toggleAuthMode() {
+  isRegisterMode = !isRegisterMode;
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  const switchText = document.getElementById('authSwitch');
+  const confirmGroup = document.getElementById('confirmPasswordGroup');
+  
+  if (isRegisterMode) {
+    title.textContent = '注册';
+    subtitle.textContent = '创建账号保存你的战绩';
+    submitBtn.textContent = '注册';
+    switchText.innerHTML = '已有账号？<a onclick="toggleAuthMode()">立即登录</a>';
+    confirmGroup.style.display = 'block';
+  } else {
+    title.textContent = '登录';
+    subtitle.textContent = '登录后可以保存你的得分';
+    submitBtn.textContent = '登录';
+    switchText.innerHTML = '没有账号？<a onclick="toggleAuthMode()">立即注册</a>';
+    confirmGroup.style.display = 'none';
+  }
+  clearAuthMsg();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function showAuthSuccess(msg) {
+  const el = document.getElementById('authSuccess');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function clearAuthMsg() {
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authSuccess').style.display = 'none';
+}
+
+async function handleAuth() {
+  clearAuthMsg();
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value;
+  
+  if (!username || !password) {
+    showAuthError('请输入用户名和密码');
+    return;
+  }
+  
+  if (isRegisterMode) {
+    const confirmPassword = document.getElementById('authConfirmPassword').value;
+    if (password !== confirmPassword) {
+      showAuthError('两次密码不一致');
+      return;
+    }
+    if (password.length < 6) {
+      showAuthError('密码至少6位');
+      return;
+    }
+    try {
+      showAuthSuccess('注册中...');
+      await register(username, password);
+      showAuthSuccess('注册成功！');
+      setTimeout(hideAuthModal, 800);
+      render();
+    } catch(e) {
+      showAuthError(e.message);
+    }
+  } else {
+    try {
+      showAuthSuccess('登录中...');
+      await login(username, password);
+      showAuthSuccess('登录成功！');
+      setTimeout(hideAuthModal, 800);
+      render();
+    } catch(e) {
+      showAuthError(e.message);
+    }
+  }
+}
+
+function skipAuth() {
+  hideAuthModal();
+  render();
+}
+
+function logout() {
+  clearAuthState();
+  render();
+  showAuthModal();
+}
 
 // ========== 牌的创建与操作 ==========
 let tileId = 0;
@@ -599,6 +828,36 @@ let persistentScores=[0,0,0,0];
 // 本局开始时的永久总分（用来计算"本局变动 = 当前分 - 本局起始分"）
 let roundStartScores=[0,0,0,0];
 
+// 用户统计数据（仅针对人类玩家）
+let userStats = { games_played: 0, games_won: 0 };
+
+function _loadUserStats() {
+  try {
+    const raw = localStorage.getItem('mahjong_user_stats');
+    if (raw) {
+      userStats = JSON.parse(raw);
+    }
+  } catch(e) {}
+}
+
+function _saveUserStats() {
+  try {
+    localStorage.setItem('mahjong_user_stats', JSON.stringify(userStats));
+  } catch(e) {}
+}
+
+// 游戏结束时同步分数到服务器
+async function syncScoreToServer() {
+  if (!currentUser || !authToken) return;
+  try {
+    const score = state.players[0].score || 0;
+    const res = await updateScore(score, userStats.games_played, userStats.games_won);
+    console.log('分数已同步到服务器');
+  } catch(e) {
+    console.error('同步分数失败:', e.message);
+  }
+}
+
 function _loadTotalScores(){
   try{
     const raw=localStorage.getItem('mahjong_total_scores');
@@ -642,6 +901,14 @@ const state={
 // ========== 游戏初始化 ==========
 function newGame(){
   tileId=0;
+  
+  // 用户统计：每开新局记录总局数
+  _loadUserStats();
+  if (currentUser) {
+    userStats.games_played++;
+    _saveUserStats();
+  }
+  
   // 连庄规则：若上局庄家胡牌或流局，庄家不变；闲家胡牌则胡牌者新庄，否则下家新庄
   if(state.players.length>0){
     const prevDealer=state.players.findIndex(p=>p.isDealer);
@@ -659,6 +926,8 @@ function newGame(){
     // 上局结束后，把玩家当前分作为新的永久总分，并保存
     persistentScores=state.players.map(p=>p.score||0);
     _saveTotalScores(persistentScores);
+    // 同步分数到服务器
+    if (currentUser) syncScoreToServer();
   } else {
     // 首次启动页面：从 localStorage 恢复永久总分
     persistentScores=_loadTotalScores();
@@ -992,6 +1261,11 @@ function humanSelfHu(){
   state.players.forEach((p,i)=>{if(i!==0)p.score-=sc;});
   state.players[0].hasWon=true;
   state.winnerIdx=0;state.huInfo=r;state.phase='ended';
+  // 更新用户统计数据
+  if (currentUser) {
+    userStats.games_won++;
+    _saveUserStats();
+  }
   state.log.push(`你自摸！${r.patternName}（${r.fan}番）得分${sc*3}`);
   render();
 }
@@ -1095,6 +1369,11 @@ function humanClaimHu(){
   p.score+=totalSc;p.hasWon=true;
   state.players[state.lastDiscarder].score-=totalSc;
   state.winnerIdx=0;state.huInfo=r;state.phase='ended';
+  // 更新用户统计数据
+  if (currentUser) {
+    userStats.games_won++;
+    _saveUserStats();
+  }
   state.log.push(`你胡牌！${r.patternName}（${r.fan}番）点炮包${PLAYER_NAMES[state.lastDiscarder]}三倍${totalSc}分`);
   render();
 }
@@ -1220,10 +1499,23 @@ function render(){
   const canPass=phase==='claiming'&&pending.some(p=>p.playerId===0);
 
   let html='';
+  // 用户信息栏
+  let userBarHtml = '';
+  if (currentUser) {
+    userBarHtml = `<div class="user-info-bar">
+      <span>👤 <span class="username">${currentUser.username}</span></span>
+      <span>总局: ${currentUser.games_played || 0} | 胜: ${currentUser.games_won || 0}</span>
+      <button class="logout-btn" onclick="logout()">退出</button>
+    </div>`;
+  }
   html+=`<div class="header-bar">
-    <div style="font-size:22px;font-weight:bold">🀄 广东麻将</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="font-size:22px;font-weight:bold">🀄 广东麻将</div>
+      ${userBarHtml}
+    </div>
     <div style="display:flex;align-items:center;gap:16px">
       <span>牌墙剩余: <b>${state.wall.length}</b></span>
+      ${!currentUser ? '<button class="btn btn-info" onclick="showAuthModal()">登录</button>' : ''}
       <button class="btn btn-danger" onclick="resetTotalScores()">重置总分</button>
       <button class="btn btn-warning" onclick="newGame()">新的一局</button>
     </div>
@@ -1468,9 +1760,30 @@ window.humanClaimChi=humanClaimChi;
 window.humanPass=humanPass;
 window.selectTile=selectTile;
 window.resetTotalScores=resetTotalScores;
+window.showAuthModal=showAuthModal;
+window.handleAuth=handleAuth;
+window.toggleAuthMode=toggleAuthMode;
+window.skipAuth=skipAuth;
+window.logout=logout;
 
 // 启动
-newGame();
+(function init() {
+  // 尝试恢复登录状态
+  if (loadAuthState()) {
+    // 已登录，从服务器获取最新用户数据
+    fetchUserInfo().catch(() => {
+      // 如果获取失败，清除登录状态
+      clearAuthState();
+    });
+  }
+  // 显示认证模态框（如果未登录）
+  if (!currentUser) {
+    showAuthModal();
+  } else {
+    // 已登录，加载用户统计
+    _loadUserStats();
+  }
+  newGame();
 })();
 </script>
 </body>
